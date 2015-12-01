@@ -7,7 +7,7 @@ class Request(object):
     def __init__(self, key=''):
         if self.key_required and not key:
             raise TypeError(
-                "An API key was not provided (not enough aruments for {0} "
+                "An API key was not provided (not enough arguments for {0} "
                 "request)".format(self.__class__.__name__))
         self.el_root = etree.Element('FbiXml')
         el_ticket = etree.SubElement(self.el_root, 'Ticket')
@@ -40,6 +40,15 @@ class Login(Request):
             'UserName': username,
             'UserPassword': password,
         })
+
+
+class SimpleRequest(object):
+
+    def __init__(self, request_name, value=None, key=''):
+        Request.__init__(self, key)
+        el = etree.SubElement(self.el_request, request_name)
+        if value is not None:
+            el.text = str(value)
 
 
 class AddInventory(Request):
