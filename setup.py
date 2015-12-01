@@ -1,6 +1,6 @@
 from setuptools import setup
+from codecs import open
 from os import path
-
 
 here = path.abspath(path.dirname(__file__))
 
@@ -13,9 +13,10 @@ setup(
     version='1.0',
     description='Fishbowl API',
     long_description=long_description,
-    url='http://github.com/SmileyChris/fishbowl-api',
+    url='http://github.com/lincolnloop/fishbowl-api',
     author='Chris Beaven',
     author_email='smileychris@gmail.com',
     license='MIT',
     packages=['fishbowl'],
+    install_requires=['lxml'],
 )

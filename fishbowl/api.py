@@ -4,7 +4,7 @@ import socket
 import struct
 import hashlib
 import datetime
-import funcutils
+import functools
 from lxml import etree
 
 from . import xmlrequests, statuscodes
@@ -16,7 +16,7 @@ class FishbowlError(Exception):
 
 def require_connected(func):
 
-    @funcutils.wraps
+    @functools.wraps(func)
     def dec(self, *args, **kwargs):
         if not self.connected:
             raise OSError('Not connected')
@@ -181,9 +181,3 @@ def check_status(code, expected=statuscodes.SUCCESS):
     if str(code) != expected:
         raise FishbowlError(message)
     return message
-
-
-# for testing:
-# fishbowl = Fishbowl()
-# fishbowl.connect(username='admin', password='admin', host='10.0.2.2')
-# print(fishbowl.get_po_list('SLC'))
