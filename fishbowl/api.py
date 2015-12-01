@@ -3,11 +3,13 @@ import base64
 import socket
 import struct
 import hashlib
-import datetime
 import functools
+import logging
 from lxml import etree
 
 from . import xmlrequests, statuscodes
+
+logger = logging.getLogger(__name__)
 
 
 class FishbowlError(Exception):
@@ -117,33 +119,28 @@ class Fishbowl:
             except socket.timeout:
                 self.close(skip_errors=True)
                 raise FishbowlError('Connection Timeout')
-        return response
+        return etree.fromstring(response)
 
     @require_connected
-    def add_inventory(self, partnum, qty, uomid, cost, loctagnum, log=False):
+    def add_inventory(self, partnum, qty, uomid, cost, loctagnum):
         """
         Add inventory.
         """
         request = xmlrequests.AddInventory(
             partnum, qty, uomid, cost, loctagnum, key=self.key)
-        # send request to fishbowl server
         response = self.send_message(request)
-        # parse xml, check status
-        for element in xmlparse(response).iter():
+        for element in response.iter():
             if element.tag != 'AddInventoryRs':
                 continue
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            if log:
-                with open('api_log.txt', 'a') as f:
-                    f.write(','.join(
-                        'add_inv', str(datetime.now()), str(partnum), str(qty),
-                        str(uomid), str(cost), str(loctagnum)))
-                    f.write('\n')
+            logger.info(','.join(
+                'add_inv', str(partnum), str(qty), str(uomid), str(cost),
+                str(loctagnum)))
 
     @require_connected
-    def cycle_inventory(self, partnum, qty, locationid, log=False):
+    def cycle_inventory(self, partnum, qty, locationid):
         """
         Cycle inventory of part in Fishbowl.
         """
@@ -156,12 +153,8 @@ class Fishbowl:
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            if log:
-                with open('api_log.txt', 'a') as f:
-                    f.write(','.join(
-                        'cycle_inv', str(datetime.now()), str(partnum),
-                        str(qty), str(locationid)))
-                    f.write('\n')
+            logger.info(','.join(
+                'cycle_inv', str(partnum), str(qty), str(locationid)))
 
     @require_connected
     def get_po_list(self, locationgroup):

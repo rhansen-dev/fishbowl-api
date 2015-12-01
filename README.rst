@@ -6,8 +6,8 @@ A Python wrapper for the Fishbowl Inventory API.
 
 Currently supports add inventory request, cycle inventory count::
 
-	add_inventory(part_number, quantity, UOM_ID, cost, location_tag_num, [log=False])
-	cycle_inventory(part_number, new_qty, location_id, [log=False])
+	add_inventory(part_number, quantity, UOM_ID, cost, location_tag_num)
+	cycle_inventory(part_number, new_qty, location_id)
 
 Example usage::
 
