@@ -1,83 +1,83 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 from lxml import etree
 
 
-class Request:
-	def __init__(self, key=""):
-		self.el_fbixml = etree.Element('FbiXml')
-		self.el_ticket = etree.SubElement(self.el_fbixml, 'Ticket')
-		self.el_key = etree.SubElement(self.el_ticket, 'Key')
-		self.el_key.text = key
-		self.el_fbimsgsrq = etree.SubElement(self.el_fbixml, 'FbiMsgsRq')
+class Request(object):
+    key_required = True
+
+    def __init__(self, key=''):
+        if self.key_required and not key:
+            raise TypeError(
+                "An API key was not provided (not enough aruments for {0} "
+                "request)".format(self.__class__.__name__))
+        self.el_root = etree.Element('FbiXml')
+        el_ticket = etree.SubElement(self.el_root, 'Ticket')
+        etree.SubElement(el_ticket, 'Key', key)
+        self.el_request = etree.SubElement(self.el_root, 'FbiMsgsRq')
+
+    @property
+    def request(self):
+        return etree.tostring(self.el_root, pretty_print=True)
+
+    def add_elements(self, parent, elements):
+        if isinstance(elements, dict):
+            elements = elements.items()
+        for name, value in elements:
+            el = etree.SubElement(parent, name)
+            if value is not None:
+                el.text = str(value)
+
 
 class Login(Request):
-	def __init__(self, username, password, key=""):
-		Request.__init__(self, key)
-		self.el_loginrq = etree.SubElement(self.el_fbimsgsrq, 'LoginRq')
-		self.el_iaid = etree.SubElement(self.el_loginrq, 'IAID')
-		self.el_iaid.text = '22'
-		self.el_ianame = etree.SubElement(self.el_loginrq, 'IAName')
-		self.el_ianame.text = 'PythonApp'
-		self.el_iadesc = etree.SubElement(self.el_loginrq, 'IADescription')
-		self.el_iadesc.text = 'Connection for Python Wrapper'
-		self.el_username = etree.SubElement(self.el_loginrq, 'UserName')
-		self.el_username.text = username
-		self.el_password = etree.SubElement(self.el_loginrq, 'UserPassword')
-		self.el_password.text = password
-		xmlmsg = etree.tostring(self.el_fbixml, pretty_print=True)
-		self.request = xmlmsg
+    key_required = False
+
+    def __init__(self, username, password, key=''):
+        Request.__init__(self, key)
+        el_rq = etree.SubElement(self.el_request, 'LoginRq')
+        self.add_elements(el_rq, {
+            'IAID': '22',
+            'IAName': 'PythonApp',
+            'IADescription': 'Connection for Python Wrapper',
+            'UserName': username,
+            'UserPassword': password,
+        })
+
 
 class AddInventory(Request):
-	def __init__(self, partnum, qty, uomid, cost, loctagnum, note="", tracking="", key=""):
-		Request.__init__(self, key)
-		if key == '':
-			raise TypeError("An API key was not provided (not enough aruments for " + 
-				            self.__class__.__name__ + " request)")
-		self.el_addinventoryrq = etree.SubElement(self.el_fbimsgsrq, 'AddInventoryRq')
-		self.el_partnum = etree.SubElement(self.el_addinventoryrq, 'PartNum')
-		self.el_partnum.text = partnum
-		self.el_quantity = etree.SubElement(self.el_addinventoryrq, 'Quantity')
-		self.el_quantity.text = qty
-		self.el_uomid = etree.SubElement(self.el_addinventoryrq, 'UOMID')
-		self.el_uomid.text = uomid
-		self.el_cost = etree.SubElement(self.el_addinventoryrq, 'Cost')
-		self.el_cost.text = cost
-		self.el_note = etree.SubElement(self.el_addinventoryrq, 'Note')
-		self.el_note.text = note
-		self.el_tracking = etree.SubElement(self.el_addinventoryrq, 'Tracking')
-		self.el_note.text = tracking
-		self.el_loctagnum = etree.SubElement(self.el_addinventoryrq, 'LocationTagNum')
-		self.el_loctagnum.text = loctagnum
-		self.el_tagnum = etree.SubElement(self.el_addinventoryrq, 'TagNum')
-		self.el_tagnum.text = '0'
-		xmlmsg = etree.tostring(self.el_fbixml, pretty_print=True)
-		self.request = xmlmsg
+
+    def __init__(
+            self, partnum, qty, uomid, cost, loctagnum, note='', tracking='',
+            key=''):
+        Request.__init__(self, key)
+        el_rq = etree.SubElement(self.el_request, 'AddInventoryRq')
+        self.add_elements(el_rq, {
+            'PartNum': partnum,
+            'Quantity': qty,
+            'UOMID': uomid,
+            'Cost': cost,
+            'Note': note,
+            'Tracking': tracking,
+            'LocationTagNum': loctagnum,
+            'TagNum': '0',
+        })
+
 
 class CycleCount(Request):
-	def __init__(self, partnum, qty, locationid, tracking="", key=""):
-		Request.__init__(self, key)
-		if key == '':
-			raise TypeError("An API key was not provided (not enough aruments for " + 
-				            self.__class__.__name__ + " request)")
-		self.el_cyclecountrq = etree.SubElement(self.el_fbimsgsrq, 'CycleCountRq')
-		self.el_partnum = etree.SubElement(self.el_cyclecountrq, 'PartNum')
-		self.el_partnum.text = partnum
-		self.el_quantity = etree.SubElement(self.el_cyclecountrq, 'Quantity')
-		self.el_quantity.text = qty
-		self.el_locationid = etree.SubElement(self.el_cyclecountrq, 'LocationID')
-		self.el_locationid.text = locationid
-		xmlmsg = etree.tostring(self.el_fbixml, pretty_print=True)
-		self.request = xmlmsg
+
+    def __init__(self, partnum, qty, locationid, tracking='', key=''):
+        Request.__init__(self, key)
+        el_rq = etree.SubElement(self.el_request, 'CycleCountRq')
+        self.add_elements(el_rq, {
+            'PartNum': partnum,
+            'Quantity': qty,
+            'LocationID': locationid,
+        })
+
 
 class GetPOList(Request):
-	def __init__(self, locationgroup, key=""):
-		Request.__init__(self, key)
-		if key == '':
-			raise TypeError("An API key was not provided (not enough aruments for " + 
-				            self.__class__.__name__ + " request)")
-		self.el_getpolistrq = etree.SubElement(self.el_fbimsgsrq, 'GetPOListRq')
-		self.el_locationgroup = etree.SubElement(self.el_getpolistrq, 'LocationGroup')
-		self.el_locationgroup.text = locationgroup
-		xmlmsg = etree.tostring(self.el_fbixml, pretty_print=True)
-		self.request = xmlmsg	
+
+    def __init__(self, locationgroup, key=''):
+        Request.__init__(self, key)
+        el_rq = etree.SubElement(self.el_request, 'GetPOListRq')
+        self.add_elements(el_rq, {
+            'LocationGroup': locationgroup,
+        })
