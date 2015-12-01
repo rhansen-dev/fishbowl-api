@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+import base64
 import socket
 import struct
 import hashlib
 import datetime
+import funcutils
 from lxml import etree
 
 from . import xmlrequests, statuscodes
@@ -12,121 +14,146 @@ class FishbowlError(Exception):
     pass
 
 
+def require_connected(func):
+
+    @funcutils.wraps
+    def dec(self, *args, **kwargs):
+        if not self.connected:
+            raise OSError('Not connected')
+        return func(self, *args, **kwargs)
+
+    return dec
+
+
 class Fishbowl:
     """
     Fishbowl API.
 
     Example usage:
-        fishbowl = Fishbowl(username='admin', password='admin')
+        fishbowl = Fishbowl()
+        fishbowl.connect(username='admin', password='admin')
     """
-    def __init__(self, username, password, host='localhost', port=28192):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = hashlib.md5(password).digest().encode('base64').replace('\n', "")
-        # connect and login
-        self.login()
+    host = 'localhost'
+    port = 28192
 
-    # below are methods used to login/generate requests
+    def __init__(self):
+        self._connected = False
 
-    def connect(self):
-        """ open socket stream and set timeout """
+    @property
+    def connected(self):
+        return self._connected
+
+    def connect(self, username, password, host=None, port=None, timeout=5):
+        """
+        Open socket stream, set timeout, and log in.
+        """
+        password = base64.b64encode(hashlib.md5(password.encode('utf-8')).digest())
+
+        if self.connected:
+            self.close()
+
+        if host:
+            self.host = host
+        if port:
+            self.port = port
         self.stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.stream.connect((self.host, self.port))
-        # timeout after 5 seconds
-        self.stream.settimeout(5)
+        self.stream.settimeout(timeout)
+        self._connected = True
 
-    def close(self):
-        """ close connection to fishbowl api """
-        self.stream.close()
+        try:
+            self.key = None
+            login_xml = xmlrequests.Login(username, password).request
+            response = self.send_message(login_xml)
+            # parse xml, grab api key, check status
+            for element in xmlparse(response).iter():
+                if element.tag == 'Key':
+                    self.key = element.text
+                status_code = element.get('statusCode')
+                if status_code and element.tag == 'LoginRs':
+                    check_status(status_code)
 
-    def get_response(self):
-        """ get server response """
+            if not self.key:
+                raise FishbowlError('No login key in response')
+        except Exception:
+            self.close(skip_errors=True)
+            raise
+
+    @require_connected
+    def close(self, skip_errors=False):
+        """
+        Close connection to Fishbowl API.
+        """
+        try:
+            self.stream.close()
+        except Exception:
+            if not skip_errors:
+                raise
+        self._connected = False
+        self.key = None
+
+    @require_connected
+    def send_message(msg):
+        # Calculate msg length and prepend to msg.
+        msg_length = len(msg)
+        # '>L' = 4 byte unsigned long, big endian format
+        packed_length = struct.pack('>L', msg_length)
+        msg = packed_length + msg
+        self.stream.send(msg(xml))
+
+        # Get response
         packed_length = self.stream.recv(4)
         length = struct.unpack('>L', packed_length)
         byte_count = 0
-        msg_received = ''
+        response = ''
         while byte_count < length[0]:
             try:
                 byte = self.stream.recv(1)
                 byte_count += 1
-                msg_received += byte
+                response += byte
             except socket.timeout:
-                self.status = "Error: Connection Timeout"
-                print(self.status)
-                break
-        return msg_received
+                self.close(skip_errors=True)
+                raise FishbowlError('Connection Timeout')
+        return response
 
-    def updatestatus(self, statuscode, status=""):
-        """ get status string from error code and update status """
-        self.statuscode = statuscode
-        self.status = getstatus(statuscode)
-
-    def login(self):
-        """Login method, use to login to fishbowl server
-        and obtain api key """
-        # create XML request
-        xml = xmlrequests.Login(self.username, self.password).request
-        # open socket and connect
-        self.connect()
-        # send request to fishbowl server
-        self.stream.send(msg(xml))
-        # get server response
-        self.response = self.get_response()
-        # parse xml, grab api key, check status
-        for element in xmlparse(self.response).iter():
-            if element.tag == "Key":
-                self.key = element.text
-            if (element.get("statusCode") is not None and element.tag == "LoginRs"):
-                statuscode = element.get("statusCode")
-                self.updatestatus(statuscode)
-
-    # request methods available to the user after instantiation
-
+    @require_connected
     def add_inventory(self, partnum, qty, uomid, cost, loctagnum, log=False):
-        """ Method for adding inventory to Fishbowl """
-        # create XML request
-        xml = xmlrequests.AddInventory(str(partnum), str(qty), str(uomid),
-                                       str(cost), str(loctagnum), key=self.key).request
+        """
+        Add inventory.
+        """
+        xml = xmlrequests.AddInventory(
+            str(partnum), str(qty), str(uomid), str(cost), str(loctagnum),
+            key=self.key).request
         # send request to fishbowl server
-        self.stream.send(msg(xml))
-        # get server response
-        self.response = self.get_response()
+        response = self.send_message(xml)
         # parse xml, check status
-        for element in xmlparse(self.response).iter():
-            if element.tag == 'AddInventoryRs':
-                if element.get('statusCode'):
-                    # check and update status
-                    statuscode = element.get('statusCode')
-                    self.updatestatus(statuscode)
-                    # output information to log file if desired
-                    if log:
-                        f = open('api_log.txt', 'a')
-                        string_to_log = ("add_inv" + ',' + str(datetime.now()) + ',' + str(partnum) + ',' +
-                                         str(qty) + ',' + str(uomid) +
-                                         str(cost) + ',' + str(loctagnum) + '\n')
-                        f.write(string_to_log)
-                        f.close()
+        for element in xmlparse(response).iter():
+            if element.tag != 'AddInventoryRs':
+                continue
+            status_code = element.get('statusCode')
+            if status_code:
+                check_status(status_code)
+            if log:
+                with open('api_log.txt', 'a') as f:
+                    f.write(','.join(
+                        'add_inv', str(datetime.now()), str(partnum), str(qty),
+                        str(uomid), str(cost), str(loctagnum)))
+                    f.write('\n')
 
+    @require_connected
     def cycle_inventory(self, partnum, qty, locationid, log=False):
-        """ Cycle inventory of part in Fishbowl """
-        # create XML request
-        xml = xmlrequests.CycleCount(str(partnum), str(qty), str(locationid), key=self.key).request
-        # send request to fishbowl server
-        self.stream.send(msg(xml))
-        # get server response
-        self.response = self.get_response()
-        print self.response
-        # parse xml, check status
-        for element in xmlparse(self.response).iter():
+        """
+        Cycle inventory of part in Fishbowl.
+        """
+        xml = xmlrequests.CycleCount(
+            str(partnum), str(qty), str(locationid), key=self.key).request
+        response = self.send_message(xml)
+        for element in xmlparse(response).iter():
             if element.tag != 'CycleCountRs':
                 continue
             status_code = element.get('statusCode')
-            if not status_code:
-                continue
-            # check and update status
-            self.updatestatus(status_code)
-            # output information to log file if desired
+            if status_code:
+                check_status(status_code)
             if log:
                 with open('api_log.txt', 'a') as f:
                     f.write(','.join(
@@ -134,16 +161,14 @@ class Fishbowl:
                         str(qty), str(locationid)))
                     f.write('\n')
 
+    @require_connected
     def get_po_list(self, locationgroup):
-        """ Get list of POs """
+        """
+        Get list of POs.
+        """
         xml = xmlrequests.GetPOList(str(locationgroup), key=self.key).request
-        self.stream.send(msg(xml))
-        self.response = self.get_response()
-        print self.response
-        return self.response
+        return self.send_message(xml)
 
-
-# global functions
 
 def xmlparse(xml):
     """ global function for parsing xml """
@@ -151,21 +176,14 @@ def xmlparse(xml):
     return root
 
 
-def msg(msg):
-    """ calculate msg length and prepend to msg """
-    msg_length = len(msg)
-    # '>L' = 4 byte unsigned long, big endian format
-    packed_length = struct.pack('>L', msg_length)
-    msg_to_send = packed_length + msg
-    return msg_to_send
-
-def check_status(code, expected=SUCCESS):
+def check_status(code, expected=statuscodes.SUCCESS):
+    message = statuscodes.get_status(code)
     if str(code) != expected:
-        raise FishbowlError(get_status(code))
-
-
+        raise FishbowlError(message)
+    return message
 
 
 # for testing:
-# stream = Fishbowl('admin', 'admin', '10.0.2.2')
-# stream.get_po_list('SLC')
+# fishbowl = Fishbowl()
+# fishbowl.connect(username='admin', password='admin', host='10.0.2.2')
+# print(fishbowl.get_po_list('SLC'))
