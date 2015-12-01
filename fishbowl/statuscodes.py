@@ -1,127 +1,68 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+SUCCESS = "1000"
 
-def getstatus(code):
-    if code == "1000":
-        value = "Success!"
-    elif code == "1001":
-        value = "Unknown Message Received"
-    elif code == "1002":
-        value = "Connection to Fishbowl Server was lost"
-    elif code == "1003":
-        value = "Some Requests had errors -- now isn't that helpful..."
-    elif code == "1004":
-        value = "There was an error with the database."
-    elif code == "1009":
-        value = "Fishbowl Server has been shut down."
-    elif code == "1010":
-        value = "You have been logged off the server by an administrator."
-    elif code == "1012":
-        value = "Unknown request function."
-    elif code == "1100":
-        value = "Unknown login error occurred."
-    elif code == "1110":
-        value = "A new Integrated Application has been added to Fishbowl Inventory. Please contact your Fishbowl Inventory Administrator to approve this Integrated Application."
-    elif code == "1111":
-        value = "This Integrated Application registration key does not match."
-    elif code == "1112":
-        value = "This Integrated Application has not been approved by the Fishbowl Inventory Administrator."
-    elif code == "1120":
-        value = "Invalid Username or Password."
-    elif code == "1130":
-        value = "Invalid Ticket passed to Fishbowl Inventory Server."
-    elif code == "1131":
-        value = "Invalid Key value."
-    elif code == "1140":
-        value = "Initialization token is not correct type."
-    elif code == "1150":
-        value = "Request was invalid"
-    elif code == "1160":
-        value = "Response was invalid."
-    elif code == "1162":
-    	value = "The login limit has been reached for the server's key."
-    elif code == "1200":
-        value = "Custom Field is invalid."
-    elif code == "1500":
-        value = "The import was not properly formed."
-    elif code == "1501":
-        value = "That import type is not supported"
-    elif code == "1502":
-        value = "File not found."
-    elif code == "1503":
-        value = "That export type is not supported."
-    elif code == "1504":
-        value = "File could not be written to."
-    elif code == "1505":
-        value = "The import data was of the wrong type."
-    elif code == "2000":
-        value = "Was not able to find the Part {0}."
-    elif code == "2001":
-        value = "The part was invalid."
-    elif code == "2100":
-        value = "Was not able to find the Product {0}."
-    elif code == "2101":
-        value = "The product was invalid."
-    elif code == "2200":
-        value = "The yield failed."
-    elif code == "2201":
-        value = "Commit failed."
-    elif code == "2202":
-        value = "Add initial inventory failed."
-    elif code == "2203":
-        value = "Can not adjust committed inventory."
-    elif code == "2300":
-        value = "Was not able to find the Tag number {0}."
-    elif code == "2301":
-        value = "The tag is invalid."
-    elif code == "2302":
-        value = "The tag move failed."
-    elif code == "2303":
-        value = "Was not able to save Tag number {0}."
-    elif code == "2304":
-        value = "Not enough available inventory in Tagnumber {0}."
-    elif code == "2305":
-        value = "Tag number {0} is a location."
-    elif code == "2400":
-        value = "Invalid UOM."
-    elif code == "2401":
-        value = "UOM {0} not found."
-    elif code == "2402":
-        value = "Integer UOM {0} cannot have non-integer quantity."
-    elif code == "2500":
-        value = "The Tracking is not valid."
-    elif code == "2510":
-        value = "Serial number is missing."
-    elif code == "2511":
-        value = "Serial number is null."
-    elif code == "2512":
-        value = "Serial number is duplicate."
-    elif code == "2513":
-        value = "Serial number is not valid."
-    elif code == "2600":
-        value = "Location not found."
-    elif code == "2601":
-        value = "Invalid location."
-    elif code == "2602":
-        value = "Location Group {0} not found."
-    elif code == "3000":
-        value = "Customer {0} not found."
-    elif code == "3001":
-        value = "Customer is invalid."
-    elif code == "3100":
-        value = "Vendor {0} not found."
-    elif code == "3101":
-        value = "Vendor is invalid."
-    elif code == "4000":
-        value = "There was an error load PO {0}."
-    elif code == "4001":
-        value = "Unknow status {0}."
-    elif code == "4002":
-        value = "Unknown carrier {0}."
-    elif code == "4003":
-        value = "Unknown QuickBooks class {0}."
-    elif code == "4004":
-        value = "PO does not have a PO number. Please turn on the auto-assign PO number option in the purchase order module options."
-    else:
-        value = 'Unknown status'
-    return value
+CODES = {
+    "1000": "Success!",
+    "1001": "Unknown Message Received",
+    "1002": "Connection to Fishbowl Server was lost",
+    "1003": "Some Requests had errors -- now isn't that helpful...",
+    "1004": "There was an error with the database.",
+    "1009": "Fishbowl Server has been shut down.",
+    "1010": "You have been logged off the server by an administrator.",
+    "1012": "Unknown request function.",
+    "1100": "Unknown login error occurred.",
+    "1110": "A new Integrated Application has been added to Fishbowl Inventory. Please contact your Fishbowl Inventory Administrator to approve this Integrated Application.",
+    "1111": "This Integrated Application registration key does not match.",
+    "1112": "This Integrated Application has not been approved by the Fishbowl Inventory Administrator.",
+    "1120": "Invalid Username or Password.",
+    "1130": "Invalid Ticket passed to Fishbowl Inventory Server.",
+    "1131": "Invalid Key value.",
+    "1140": "Initialization token is not correct type.",
+    "1150": "Request was invalid",
+    "1160": "Response was invalid.",
+    "1162": "The login limit has been reached for the server's key.",
+    "1200": "Custom Field is invalid.",
+    "1500": "The import was not properly formed.",
+    "1501": "That import type is not supported",
+    "1502": "File not found.",
+    "1503": "That export type is not supported.",
+    "1504": "File could not be written to.",
+    "1505": "The import data was of the wrong type.",
+    "2000": "Was not able to find the Part {0}.",
+    "2001": "The part was invalid.",
+    "2100": "Was not able to find the Product {0}.",
+    "2101": "The product was invalid.",
+    "2200": "The yield failed.",
+    "2201": "Commit failed.",
+    "2202": "Add initial inventory failed.",
+    "2203": "Can not adjust committed inventory.",
+    "2300": "Was not able to find the Tag number {0}.",
+    "2301": "The tag is invalid.",
+    "2302": "The tag move failed.",
+    "2303": "Was not able to save Tag number {0}.",
+    "2304": "Not enough available inventory in Tagnumber {0}.",
+    "2305": "Tag number {0} is a location.",
+    "2400": "Invalid UOM.",
+    "2401": "UOM {0} not found.",
+    "2402": "Integer UOM {0} cannot have non-integer quantity.",
+    "2500": "The Tracking is not valid.",
+    "2510": "Serial number is missing.",
+    "2511": "Serial number is null.",
+    "2512": "Serial number is duplicate.",
+    "2513": "Serial number is not valid.",
+    "2600": "Location not found.",
+    "2601": "Invalid location.",
+    "2602": "Location Group {0} not found.",
+    "3000": "Customer {0} not found.",
+    "3001": "Customer is invalid.",
+    "3100": "Vendor {0} not found.",
+    "3101": "Vendor is invalid.",
+    "4000": "There was an error load PO {0}.",
+    "4001": "Unknow status {0}.",
+    "4002": "Unknown carrier {0}.",
+    "4003": "Unknown QuickBooks class {0}.",
+    "4004": "PO does not have a PO number. Please turn on the auto-assign PO number option in the purchase order module options.",
+}
+
+
+def get_status(code):
+    return CODES.get(str(code), "Unknown status")
