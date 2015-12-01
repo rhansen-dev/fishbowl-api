@@ -93,13 +93,16 @@ class Fishbowl:
         self.key = None
 
     @require_connected
-    def send_message(msg):
+    def send_message(self, msg):
+        if isinstance(msg, xmlrequests.Request):
+            msg = msg.request
+
         # Calculate msg length and prepend to msg.
         msg_length = len(msg)
         # '>L' = 4 byte unsigned long, big endian format
         packed_length = struct.pack('>L', msg_length)
         msg = packed_length + msg
-        self.stream.send(msg(xml))
+        self.stream.send(msg)
 
         # Get response
         packed_length = self.stream.recv(4)
@@ -121,11 +124,10 @@ class Fishbowl:
         """
         Add inventory.
         """
-        xml = xmlrequests.AddInventory(
-            str(partnum), str(qty), str(uomid), str(cost), str(loctagnum),
-            key=self.key).request
+        request = xmlrequests.AddInventory(
+            partnum, qty, uomid, cost, loctagnum, key=self.key)
         # send request to fishbowl server
-        response = self.send_message(xml)
+        response = self.send_message(request)
         # parse xml, check status
         for element in xmlparse(response).iter():
             if element.tag != 'AddInventoryRs':
@@ -145,9 +147,9 @@ class Fishbowl:
         """
         Cycle inventory of part in Fishbowl.
         """
-        xml = xmlrequests.CycleCount(
-            str(partnum), str(qty), str(locationid), key=self.key).request
-        response = self.send_message(xml)
+        request = xmlrequests.CycleCount(
+            partnum, qty, locationid, key=self.key)
+        response = self.send_message(request)
         for element in xmlparse(response).iter():
             if element.tag != 'CycleCountRs':
                 continue
@@ -166,8 +168,8 @@ class Fishbowl:
         """
         Get list of POs.
         """
-        xml = xmlrequests.GetPOList(str(locationgroup), key=self.key).request
-        return self.send_message(xml)
+        request = xmlrequests.GetPOList(locationgroup, key=self.key)
+        return self.send_message(request)
 
 
 def xmlparse(xml):
