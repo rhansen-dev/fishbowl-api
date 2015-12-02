@@ -32,14 +32,12 @@ class FishbowlObject(collections.Mapping):
 
     def parse_fields(self, base_el, fields):
         output = {}
-        for field_name, parser in fields:
+        for field_name, parser in fields.items():
             el = self.get_child(base_el, field_name)
-            if not el:
+            if el is None:
                 continue
             if isinstance(parser, dict):
                 value = self.parse_fields(el, parser)
-            elif issubclass(parser, FishbowlObject):
-                value = parser(base_el)
             elif isinstance(parser, list):
                 value = []
                 if parser:
@@ -50,7 +48,9 @@ class FishbowlObject(collections.Mapping):
                     child_parser = classes.get(child.tag)
                     if not child_parser:
                         continue
-                    value.append(child_parser(base_el))
+                    value.append(child_parser(child))
+            elif isinstance(parser, FishbowlObject):
+                value = parser(el)
             else:
                 value = el.text
                 if value is None:
@@ -76,6 +76,18 @@ class FishbowlObject(collections.Mapping):
 
     def __len__(self):
         return len(self.mapped)
+
+    def squash(self):
+        return self.squash_obj(self.mapped)
+
+    def squash_obj(self, obj):
+        if isinstance(obj, dict):
+            return dict((key, self.squash_obj(value)) for key, value in obj.items())
+        if isinstance(obj, list):
+            return [self.squash_obj(value) for value in obj]
+        if isinstance(obj, FishbowlObject):
+            return obj.squash()
+        return obj
 
 
 class CustomListItem(FishbowlObject):

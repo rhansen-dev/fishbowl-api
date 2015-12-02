@@ -11,7 +11,8 @@ class Request(object):
                 "request)".format(self.__class__.__name__))
         self.el_root = etree.Element('FbiXml')
         el_ticket = etree.SubElement(self.el_root, 'Ticket')
-        etree.SubElement(el_ticket, 'Key', key)
+        el_key = etree.SubElement(el_ticket, 'Key')
+        el_key.text = key
         self.el_request = etree.SubElement(self.el_root, 'FbiMsgsRq')
 
     @property

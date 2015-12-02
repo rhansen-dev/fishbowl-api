@@ -17,6 +17,10 @@ class FishbowlError(Exception):
 
 
 def require_connected(func):
+    """
+    A decorator to wrap :cls:`Fishbowl` methods that can only be called after a
+    connection to the API server has been made.
+    """
 
     @functools.wraps(func)
     def dec(self, *args, **kwargs):
@@ -45,6 +49,15 @@ class Fishbowl:
     def connected(self):
         return self._connected
 
+    def make_stream(self, timeout=5):
+        """
+        Create a connection to communicate with the API.
+        """
+        stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        stream.connect((self.host, self.port))
+        stream.settimeout(timeout)
+        return stream
+
     def connect(self, username, password, host=None, port=None, timeout=5):
         """
         Open socket stream, set timeout, and log in.
@@ -58,9 +71,7 @@ class Fishbowl:
             self.host = host
         if port:
             self.port = port
-        self.stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.stream.connect((self.host, self.port))
-        self.stream.settimeout(timeout)
+        self.stream = self.make_stream(timeout=timeout)
         self._connected = True
 
         try:
@@ -68,7 +79,7 @@ class Fishbowl:
             login_xml = xmlrequests.Login(username, password).request
             response = self.send_message(login_xml)
             # parse xml, grab api key, check status
-            for element in xmlparse(response).iter():
+            for element in response.iter():
                 if element.tag == 'Key':
                     self.key = element.text
                 status_code = element.get('statusCode')
@@ -94,17 +105,24 @@ class Fishbowl:
         self._connected = False
         self.key = None
 
-    @require_connected
-    def send_message(self, msg):
-        if isinstance(msg, xmlrequests.Request):
-            msg = msg.request
-
-        # Calculate msg length and prepend to msg.
+    def pack_message(self, msg):
+        """
+        Calculate msg length and prepend to msg.
+        """
         msg_length = len(msg)
         # '>L' = 4 byte unsigned long, big endian format
         packed_length = struct.pack('>L', msg_length)
-        msg = packed_length + msg
-        self.stream.send(msg)
+        return packed_length + msg
+
+    @require_connected
+    def send_message(self, msg):
+        """
+        Send a message to the API and return the root element of the XML that
+        comes back as a response.
+        """
+        if isinstance(msg, xmlrequests.Request):
+            msg = msg.request
+        self.stream.send(self.pack_message(msg))
 
         # Get response
         packed_length = self.stream.recv(4)
@@ -147,7 +165,7 @@ class Fishbowl:
         request = xmlrequests.CycleCount(
             partnum, qty, locationid, key=self.key)
         response = self.send_message(request)
-        for element in xmlparse(response).iter():
+        for element in response.iter():
             if element.tag != 'CycleCountRs':
                 continue
             status_code = element.get('statusCode')
@@ -165,13 +183,10 @@ class Fishbowl:
         return self.send_message(request)
 
 
-def xmlparse(xml):
-    """ global function for parsing xml """
-    root = etree.fromstring(xml)
-    return root
-
-
 def check_status(code, expected=statuscodes.SUCCESS):
+    """
+    Check a status code, raising an exception if it wasn't the expected code.
+    """
     message = statuscodes.get_status(code)
     if str(code) != expected:
         raise FishbowlError(message)
