@@ -62,7 +62,8 @@ class Fishbowl:
         """
         Open socket stream, set timeout, and log in.
         """
-        password = base64.b64encode(hashlib.md5(password.encode('utf-8')).digest())
+        password = base64.b64encode(
+            hashlib.md5(password.encode('utf-8')).digest())
 
         if self.connected:
             self.close()
@@ -128,12 +129,12 @@ class Fishbowl:
         packed_length = self.stream.recv(4)
         length = struct.unpack('>L', packed_length)
         byte_count = 0
-        response = ''
+        response = b''
         while byte_count < length[0]:
             try:
                 byte = self.stream.recv(1)
                 byte_count += 1
-                response += byte
+                response += bytes(byte)
             except socket.timeout:
                 self.close(skip_errors=True)
                 raise FishbowlError('Connection Timeout')

@@ -82,7 +82,8 @@ class FishbowlObject(collections.Mapping):
 
     def squash_obj(self, obj):
         if isinstance(obj, dict):
-            return dict((key, self.squash_obj(value)) for key, value in obj.items())
+            return dict(
+                (key, self.squash_obj(value)) for key, value in obj.items())
         if isinstance(obj, list):
             return [self.squash_obj(value) for value in obj]
         if isinstance(obj, FishbowlObject):
