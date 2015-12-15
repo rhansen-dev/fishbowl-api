@@ -127,14 +127,17 @@ class Fishbowl:
 
         # Get response
         packed_length = self.stream.recv(4)
-        length = struct.unpack('>L', packed_length)
+        length = struct.unpack('>L', packed_length)[0]
         byte_count = 0
         response = b''
-        while byte_count < length[0]:
+        while byte_count < length:
             try:
                 byte = self.stream.recv(1)
                 byte_count += 1
-                response += bytes(byte)
+                try:
+                    response += byte.to_bytes(1, 'big')
+                except AttributeError:   # Python 2
+                    response += bytes(byte)
             except socket.timeout:
                 self.close(skip_errors=True)
                 raise FishbowlError('Connection Timeout')
@@ -154,9 +157,9 @@ class Fishbowl:
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            logger.info(','.join(
+            logger.info(','.join((
                 'add_inv', str(partnum), str(qty), str(uomid), str(cost),
-                str(loctagnum)))
+                str(loctagnum))))
 
     @require_connected
     def cycle_inventory(self, partnum, qty, locationid):
@@ -172,8 +175,8 @@ class Fishbowl:
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            logger.info(','.join(
-                'cycle_inv', str(partnum), str(qty), str(locationid)))
+            logger.info(','.join((
+                'cycle_inv', str(partnum), str(qty), str(locationid))))
 
     @require_connected
     def get_po_list(self, locationgroup):
