@@ -83,9 +83,10 @@ class Fishbowl:
             for element in response.iter():
                 if element.tag == 'Key':
                     self.key = element.text
-                status_code = element.get('statusCode')
-                if status_code and element.tag == 'LoginRs':
-                    check_status(status_code)
+                if element.tag in ('loginRs', 'LoginRs'):
+                    status_code = element.get('statusCode')
+                    if status_code:
+                        check_status(status_code)
 
             if not self.key:
                 raise FishbowlError('No login key in response')
@@ -98,13 +99,13 @@ class Fishbowl:
         """
         Close connection to Fishbowl API.
         """
+        self._connected = False
+        self.key = None
         try:
             self.stream.close()
         except Exception:
             if not skip_errors:
                 raise
-        self._connected = False
-        self.key = None
 
     def pack_message(self, msg):
         """

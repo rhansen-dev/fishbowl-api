@@ -10,12 +10,12 @@ except ImportError:   # < Python 3.3
     import mock
 
 
-LOGIN_SUCCESS = etree.fromstring('''
+LOGIN_SUCCESS = '''
 <FbiXml>
 <Key>ABC</Key>
 <loginRs statusCode={0!r}></loginRs>
 </FbiXml>
-'''.format(statuscodes.SUCCESS))
+'''.format(statuscodes.SUCCESS).encode('ascii')
 
 ADD_INVENTORY_XML = '''
 <FbiXml>
@@ -49,8 +49,9 @@ class APITest(TestCase):
         self.fake_stream = mock.MagicMock()
         self.api.make_stream = mock.Mock(return_value=self.fake_stream)
 
-    def connect(self, **kwargs):
-        self.api.send_message = mock.Mock(return_value=LOGIN_SUCCESS)
+    def connect(self, login_return_value=LOGIN_SUCCESS, **kwargs):
+        self.api.send_message = mock.Mock(
+            return_value=etree.fromstring(login_return_value))
         self.api.connect(username='test', password='password', **kwargs)
         del self.api.send_message
 
@@ -62,6 +63,24 @@ class APITest(TestCase):
 
         self.api.close()
         self.assertTrue(self.fake_stream.close.called)
+        self.assertFalse(self.api.connected)
+
+    def test_connect_bad_response(self):
+        self.assertRaises(
+            api.FishbowlError, self.connect,
+            login_return_value=ADD_INVENTORY_XML)
+        self.assertFalse(self.api.connected)
+
+    def test_bad_close(self):
+        self.connect()
+        self.fake_stream.close.side_effect = ValueError()
+        self.assertRaises(ValueError, self.api.close)
+        self.assertFalse(self.api.connected)
+
+    def test_bad_close_silent(self):
+        self.connect()
+        self.fake_stream.close.side_effect = ValueError()
+        self.api.close(skip_errors=True)
         self.assertFalse(self.api.connected)
 
     def test_reconnect(self):

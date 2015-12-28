@@ -1,65 +1,13 @@
+import os
 from unittest import TestCase
 from lxml import etree
 from decimal import Decimal
 
 from fishbowl import objects
 
-xml = '''
-<Customer>
-    <Status>Normal</Status>
-    <DefPaymentTerms>COD</DefPaymentTerms>
-    <DefShipTerms>Prepaid</DefShipTerms>
-    <TaxRate>None</TaxRate>
-    <Name>Sam Ball</Name>
-    <CreditLimit>1000000.00</CreditLimit>
-    <TaxExempt>true</TaxExempt>
-    <TaxExemptNumber>12345</TaxExemptNumber>
-    <Note>Hello World</Note>
-    <ActiveFlag>true</ActiveFlag>
-    <DefaultSalesman>jen</DefaultSalesman>
-    <DefaultCarrier>USPS</DefaultCarrier>
-    <JobDepth>1</JobDepth>
-    <Addresses>
-        <Address>
-            <Temp-Account>
-                <Type>10</Type>
-            </Temp-Account>
-            <Name>Main Office</Name>
-            <Attn>Attention</Attn>
-            <Street>123 Neverland dr.</Street>
-            <City>Murray</City>
-            <Zip>84121</Zip>
-            <Default>true</Default>
-            <Residential>false</Residential>
-            <Type>Main Office</Type>
-            <State>
-                <Name>Utah</Name>
-                <Code>UT</Code>
-                <CountryID>2</CountryID>
-            </State>
-            <Country>
-                <Name>United States</Name>
-                <Code>US</Code>
-            </Country>
-            <AddressInformationList>
-                <AddressInformation>
-                    <Name>Main Office</Name>
-                    <Data>Address Data</Data>
-                    <Default>true</Default>
-                    <Type>Home</Type>
-                </AddressInformation>
-            </AddressInformationList>
-        </Address>
-    </Addresses>
-    <CustomFields>
-        <CustomField>
-            <Type>CFT_TEXT</Type>
-            <Name>Custom1</Name>
-            <Info>Custom Data</Info>
-        </CustomField>
-    </CustomFields>
-</Customer>
-'''
+xml_filename = os.path.join(os.path.dirname(__file__), 'customer.xml')
+with open(xml_filename) as xml_file:
+    xml = xml_file.read()
 
 
 class CustomerTest(TestCase):
