@@ -54,6 +54,7 @@ class Fishbowl:
         Create a connection to communicate with the API.
         """
         stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger.debug('Connecting to {}:{}'.format(self.host, self.port))
         stream.connect((self.host, self.port))
         stream.settimeout(timeout)
         return stream
@@ -124,6 +125,7 @@ class Fishbowl:
         """
         if isinstance(msg, xmlrequests.Request):
             msg = msg.request
+        logger.debug('Sending message:\n' + msg)
         self.stream.send(self.pack_message(msg))
 
         # Get response
@@ -142,6 +144,7 @@ class Fishbowl:
             except socket.timeout:
                 self.close(skip_errors=True)
                 raise FishbowlError('Connection Timeout')
+        logger.debug(response)
         return etree.fromstring(response)
 
     @require_connected
