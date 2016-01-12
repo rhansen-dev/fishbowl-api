@@ -1,3 +1,4 @@
+import datetime
 from lxml import etree
 
 
@@ -25,7 +26,14 @@ class Request(object):
         for name, value in elements:
             el = etree.SubElement(parent, name)
             if value is not None:
-                el.text = str(value)
+                if isinstance(value, datetime.datetime):
+                    value = value.strftime("%Y-%m-%dT%H:%M:%S")
+                else:
+                    value = str(value)
+                el.text = value
+
+    def add_request_element(self, name):
+        return etree.SubElement(self.el_request, name)
 
 
 class Login(Request):
@@ -33,7 +41,7 @@ class Login(Request):
 
     def __init__(self, username, password, key=''):
         Request.__init__(self, key)
-        el_rq = etree.SubElement(self.el_request, 'LoginRq')
+        el_rq = self.add_request_element('LoginRq')
         self.add_elements(el_rq, {
             'IAID': '22',
             'IAName': 'PythonApp',
@@ -43,13 +51,16 @@ class Login(Request):
         })
 
 
-class SimpleRequest(object):
+class SimpleRequest(Request):
 
     def __init__(self, request_name, value=None, key=''):
         Request.__init__(self, key)
-        el = etree.SubElement(self.el_request, request_name)
+        el = self.add_request_element(request_name)
         if value is not None:
-            el.text = str(value)
+            if isinstance(value, dict):
+                self.add_elements(el, value)
+            else:
+                el.text = str(value)
 
 
 class AddInventory(Request):
@@ -58,7 +69,7 @@ class AddInventory(Request):
             self, partnum, qty, uomid, cost, loctagnum, note='', tracking='',
             key=''):
         Request.__init__(self, key)
-        el_rq = etree.SubElement(self.el_request, 'AddInventoryRq')
+        el_rq = self.add_request_element('AddInventoryRq')
         self.add_elements(el_rq, {
             'PartNum': partnum,
             'Quantity': qty,
@@ -75,7 +86,7 @@ class CycleCount(Request):
 
     def __init__(self, partnum, qty, locationid, tracking='', key=''):
         Request.__init__(self, key)
-        el_rq = etree.SubElement(self.el_request, 'CycleCountRq')
+        el_rq = self.add_request_element('CycleCountRq')
         self.add_elements(el_rq, {
             'PartNum': partnum,
             'Quantity': qty,
@@ -85,9 +96,10 @@ class CycleCount(Request):
 
 class GetPOList(Request):
 
-    def __init__(self, locationgroup, key=''):
+    def __init__(self, locationgroup=None, key=''):
         Request.__init__(self, key)
-        el_rq = etree.SubElement(self.el_request, 'GetPOListRq')
-        self.add_elements(el_rq, {
-            'LocationGroup': locationgroup,
-        })
+        el_rq = self.add_request_element('GetPOListRq')
+        if locationgroup is not None:
+            self.add_elements(el_rq, {
+                'LocationGroup': locationgroup,
+            })

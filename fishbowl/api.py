@@ -84,7 +84,7 @@ class Fishbowl:
             for element in response.iter():
                 if element.tag == 'Key':
                     self.key = element.text
-                if element.tag in ('loginRs', 'LoginRs'):
+                if element.tag in ('loginRs', 'LoginRs', 'FbiMsgsRs'):
                     status_code = element.get('statusCode')
                     if status_code:
                         check_status(status_code)
@@ -130,20 +130,20 @@ class Fishbowl:
 
         # Get response
         packed_length = self.stream.recv(4)
-        length = struct.unpack('>L', packed_length)[0]
         byte_count = 0
         response = b''
-        while byte_count < length:
-            try:
+        try:
+            length = struct.unpack('>L', packed_length)[0]
+            while byte_count < length:
                 byte = self.stream.recv(1)
                 byte_count += 1
                 try:
                     response += byte.to_bytes(1, 'big')
                 except AttributeError:   # Python 2
                     response += bytes(byte)
-            except socket.timeout:
-                self.close(skip_errors=True)
-                raise FishbowlError('Connection Timeout')
+        except socket.timeout:
+            self.close(skip_errors=True)
+            raise FishbowlError('Connection Timeout')
         logger.debug(response)
         return etree.fromstring(response)
 
@@ -155,9 +155,7 @@ class Fishbowl:
         request = xmlrequests.AddInventory(
             partnum, qty, uomid, cost, loctagnum, key=self.key)
         response = self.send_message(request)
-        for element in response.iter():
-            if element.tag != 'AddInventoryRs':
-                continue
+        for element in response.iter('AddInventoryRs'):
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
@@ -173,9 +171,7 @@ class Fishbowl:
         request = xmlrequests.CycleCount(
             partnum, qty, locationid, key=self.key)
         response = self.send_message(request)
-        for element in response.iter():
-            if element.tag != 'CycleCountRs':
-                continue
+        for element in response.iter('CycleCountRs'):
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
@@ -188,6 +184,11 @@ class Fishbowl:
         Get list of POs.
         """
         request = xmlrequests.GetPOList(locationgroup, key=self.key)
+        return self.send_message(request)
+
+    @require_connected
+    def send_request(self, name, value=None):
+        request = xmlrequests.SimpleRequest(name, value, key=self.key)
         return self.send_message(request)
 
 
