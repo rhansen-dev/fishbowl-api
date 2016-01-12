@@ -41,6 +41,7 @@ class Fishbowl:
     """
     host = 'localhost'
     port = 28192
+    encoding = 'latin-1'
 
     def __init__(self):
         self._connected = False
@@ -64,7 +65,7 @@ class Fishbowl:
         Open socket stream, set timeout, and log in.
         """
         password = base64.b64encode(
-            hashlib.md5(password.encode('utf-8')).digest())
+            hashlib.md5(password.encode(self.encoding)).digest())
 
         if self.connected:
             self.close()
@@ -151,6 +152,7 @@ class Fishbowl:
                 msg = 'Connection timeout'
             raise FishbowlError(msg)
         response = response.decode(self.encoding)
+        logger.debug('Response received:\n' + response)
         return etree.fromstring(response)
 
     @require_connected
@@ -165,9 +167,9 @@ class Fishbowl:
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            logger.info(','.join((
-                'add_inv', str(partnum), str(qty), str(uomid), str(cost),
-                str(loctagnum))))
+            logger.info(','.join([
+                '{}'.format(val)
+                for val in ['add_inv', partnum, qty, uomid, cost, loctagnum]]))
 
     @require_connected
     def cycle_inventory(self, partnum, qty, locationid):
@@ -181,8 +183,9 @@ class Fishbowl:
             status_code = element.get('statusCode')
             if status_code:
                 check_status(status_code)
-            logger.info(','.join((
-                'cycle_inv', str(partnum), str(qty), str(locationid))))
+            logger.info(','.join([
+                '{}'.format(val)
+                for val in ['cycle_inv', partnum, qty, locationid]]))
 
     @require_connected
     def get_po_list(self, locationgroup):
@@ -203,6 +206,6 @@ def check_status(code, expected=statuscodes.SUCCESS):
     Check a status code, raising an exception if it wasn't the expected code.
     """
     message = statuscodes.get_status(code)
-    if str(code) != expected:
+    if code != expected:
         raise FishbowlError(message)
     return message

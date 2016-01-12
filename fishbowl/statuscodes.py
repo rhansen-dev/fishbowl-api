@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 SUCCESS = "1000"
 
 CODES = {
@@ -203,4 +205,4 @@ CODES = {
 
 
 def get_status(code):
-    return CODES.get(str(code), "Unknown status")
+    return CODES.get('{}'.format(code), "Unknown status")
