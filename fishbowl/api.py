@@ -129,11 +129,13 @@ class Fishbowl:
         self.stream.send(self.pack_message(msg))
 
         # Get response
-        packed_length = self.stream.recv(4)
         byte_count = 0
         response = b''
+        received_length = False
         try:
+            packed_length = self.stream.recv(4)
             length = struct.unpack('>L', packed_length)[0]
+            received_length = True
             while byte_count < length:
                 byte = self.stream.recv(1)
                 byte_count += 1
@@ -143,8 +145,12 @@ class Fishbowl:
                     response += bytes(byte)
         except socket.timeout:
             self.close(skip_errors=True)
-            raise FishbowlError('Connection Timeout')
-        logger.debug(response)
+            if received_length:
+                msg = 'Connection timeout (after length received)'
+            else:
+                msg = 'Connection timeout'
+            raise FishbowlError(msg)
+        response = response.decode(self.encoding)
         return etree.fromstring(response)
 
     @require_connected
