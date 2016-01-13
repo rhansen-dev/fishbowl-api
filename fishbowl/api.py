@@ -55,7 +55,7 @@ class Fishbowl:
         Create a connection to communicate with the API.
         """
         stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        logger.debug('Connecting to {}:{}'.format(self.host, self.port))
+        logger.info('Connecting to {}:{}'.format(self.host, self.port))
         stream.connect((self.host, self.port))
         stream.settimeout(timeout)
         return stream
@@ -126,6 +126,16 @@ class Fishbowl:
         """
         if isinstance(msg, xmlrequests.Request):
             msg = msg.request
+
+        tag = 'unknown'
+        try:
+            xml = etree.fromstring(msg)
+            request_tag = xml.find('FbiMsgsRq')
+            if request_tag is not None and len(request_tag):
+                tag = request_tag[0].tag
+        except etree.XMLSyntaxError:
+            pass
+        logger.info('Sending message ({})'.format(tag))
         logger.debug('Sending message:\n' + msg)
         self.stream.send(self.pack_message(msg))
 
