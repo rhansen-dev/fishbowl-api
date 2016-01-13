@@ -7,7 +7,7 @@ import functools
 import logging
 from lxml import etree
 
-from . import xmlrequests, statuscodes
+from . import xmlrequests, statuscodes, objects
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +204,26 @@ class Fishbowl:
         """
         request = xmlrequests.GetPOList(locationgroup, key=self.key)
         return self.send_message(request)
+
+    @require_connected
+    def get_customers(self):
+        """
+        Get customers.
+        """
+        customers = []
+        request = self.send_request('CustomerNameListRq')
+        for tag in request.find('FbiMsgsRs').iter('Name'):
+
+            def lazy_customer():
+                customer_req = self.send_request(
+                    'CustomerGetRq', {'Name': tag.text})
+                root = customer_req.find('FbiMsgsRs')
+                return root.find('CustomerGetRs')[0]
+
+            customer = objects.Customer(
+                lazy_root_el=lazy_customer, name=tag.text)
+            customers.append(customer)
+        return customers
 
     @require_connected
     def send_request(self, name, value=None):

@@ -1,8 +1,11 @@
+from __future__ import unicode_literals
 import collections
 import sys
 import inspect
 import datetime
 import decimal
+
+import six
 
 
 def fishbowl_datetime(text):
@@ -25,10 +28,36 @@ def all_fishbowl_objects():
     ))
 
 
+@six.python_2_unicode_compatible
 class FishbowlObject(collections.Mapping):
+    name_attr = None
 
-    def __init__(self, root_el):
-        self.mapped = self.parse_fields(root_el, self.fields)
+    def __init__(self, root_el=None, lazy_root_el=None, name=None):
+        if not (root_el is None) ^ (lazy_root_el is None):
+            raise AttributeError('Expected either root_el or lazy_root_el')
+        self._lazy_load = lazy_root_el
+        if root_el is not None:
+            self.mapped = self.parse_fields(root_el, self.fields)
+        self.name = name
+
+    def __str__(self):
+        if self.name:
+            return self.name
+        if self.name_attr:
+            value = self
+            for attr in self.name_attr.split('.'):
+                value = value[attr]
+        return value or ''
+
+    @property
+    def mapped(self):
+        if not hasattr(self, '_mapped'):
+            self._mapped = self.parse_fields(self._lazy_load(), self.fields)
+        return self._mapped
+
+    @mapped.setter
+    def mapped(self, value):
+        self._mapped = value
 
     def parse_fields(self, base_el, fields):
         output = {}
