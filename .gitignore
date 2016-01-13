@@ -2,5 +2,5 @@
 .tox/
 .coverage
 fishbowl.log
-fishbowl.ini
+fishbowl/fishbowl.ini
 
