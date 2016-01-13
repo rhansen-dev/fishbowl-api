@@ -73,8 +73,8 @@ class Fishbowl:
         if host:
             self.host = host
         if port:
-            self.port = port
-        self.stream = self.make_stream(timeout=timeout)
+            self.port = int(port)
+        self.stream = self.make_stream(timeout=float(timeout))
         self._connected = True
 
         try:
