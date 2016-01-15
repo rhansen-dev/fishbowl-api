@@ -282,6 +282,33 @@ class Part(FishbowlObject):
     }
 
 
+class Product(FishbowlObject):
+    fields = {
+        'ID': int,
+        'PartID': int,
+        'Part': Part,
+        'Num': None,
+        'Description': None,
+        'Price': decimal.Decimal,
+        'UOM': UOM,
+        'DefaultSOItemType': None,
+        'DisplayType': None,
+        'Weight': int,
+        'WeightUOMID': int,
+        'Width': int,
+        'Height': int,
+        'Len': int,
+        'SizeUOMID': int,
+        'SellableInOtherUOMFlag': fishbowl_boolean,
+        'ActiveFlag': fishbowl_boolean,
+        'TaxableFlag': fishbowl_boolean,
+        'UsePriceFlag': fishbowl_boolean,
+        'KitFlag': fishbowl_boolean,
+        'ShowSOComboFlag': fishbowl_boolean,
+        'Image': None,
+    }
+
+
 class SalesOrderItem(FishbowlObject):
     fields = {
         'ID': int,

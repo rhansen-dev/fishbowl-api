@@ -313,29 +313,28 @@ class Fishbowl:
         """
         products = []
         for part in self.get_parts(populate_uoms=False):
+            part_number = part.get('Num')
+            if not part_number:
+                continue
 
-            def lazy_product():
+            def get_product():
                 inner_req = self.send_request(
-                    'ProductGetRq', {'Number': part['Number']})
+                    'ProductGetRq', {'Number': part_number})
                 root = inner_req.find('FbiMsgsRs').find('ProductGetRs')
-                if root.get('statusCode') == statuscodes.SUCCESS:
+                if root.get('statusCode') == statuscodes.SUCCESS and len(root):
                     return root[0]
-                # Need to return an element, an empty one is probably more
-                # correct but the ProductGetRs root node is good enough.
-                return root
+                return etree.Element('empty')
 
             product_kwargs = {
-                'name': part['Number'],
+                'name': part_number,
             }
             if lazy:
-                product_kwargs['lazy_root_el'] = lazy_product
+                product_kwargs['lazy_root_el'] = get_product
             else:
-                request = self.send_request(
-                    'ProductGetRq', {'Number': part['Number']})
-                root = request.find('FbiMsgsRs').find('ProductGetRs')
-                if root.get('statusCode') != statuscodes.SUCCESS:
+                product_node = get_product()
+                if not len(product_node):
                     continue
-                product_kwargs['root_el'] = root[0]
+                product_kwargs['root_el'] = product_node
             product = objects.Product(**product_kwargs)
             products.append(product)
         return products
