@@ -250,6 +250,95 @@ class Fishbowl:
         return customers
 
     @require_connected
+    def get_vendors(self):
+        """
+        Get a list of vendors.
+
+        :returns: A list of vendor names
+        """
+        customers = []
+        request = self.send_request('VendorNameListRq')
+        for tag in request.find('FbiMsgsRs').iter('Name'):
+
+            def lazy_customer():
+                customer_req = self.send_request(
+                    'CustomerGetRq', {'Name': tag.text})
+                root = customer_req.find('FbiMsgsRs')
+                return root.find('CustomerGetRs')[0]
+
+            customer = objects.Customer(
+                lazy_root_el=lazy_customer, name=tag.text)
+            customers.append(customer)
+        return customers
+
+    @require_connected
+    def get_parts(self, populate_uoms=True):
+        """
+        Get a light list of parts.
+
+        :param populate_uoms: Whether to populate the UOM for each part
+            (default ``True``)
+        :returns: A list of cls:`fishbowl.objects.Part`
+        """
+        response = self.send_request('LightPartListRq')
+        parts = self.get_objects(
+            response, 'LightPartListRs', objects.Part, 'LightPart')
+        if populate_uoms:
+            response = self.send_request('UOMRq')
+            uom_map = dict(
+                (uom['UOMID'], uom) for uom in
+                self.get_objects(response, 'UOMRs', objects.UOM, 'UOM'))
+            for part in parts:
+                uomid = part.get('UOMID')
+                if not uomid:
+                    continue
+                uom = uom_map.get(uomid)
+                if uom:
+                    part.mapped['UOM'] = uom
+        return parts
+
+    @require_connected
+    def get_products(self, lazy=True):
+        """
+        Get a list of products, optionally lazy.
+
+        The tricky thing is that there's no direct API for a product list, so
+        we have to get a list of parts and then find the matching products.
+        Understandably then, the non-lazy option is intensive, while the lazy
+        option results in some products potentially being empty.
+
+        :param lazy: Whether the products should be lazily loaded (default
+            ``True``)
+        :returns: A list of cls:`fishbowl.objects.Product`
+        """
+        products = []
+        for part in self.get_parts(populate_uoms=False):
+
+            def lazy_product():
+                inner_req = self.send_request(
+                    'ProductGetRq', {'Number': part['Number']})
+                root = inner_req.find('FbiMsgsRs').find('ProductGetRs')
+                if root.get('statusCode') == statuscodes.SUCCESS:
+                    return root[0]
+                # Need to return an element, an empty one is probably more
+                # correct but the ProductGetRs root node is good enough.
+                return root
+
+            product_kwargs = {
+                'name': part['Number'],
+            }
+            if lazy:
+                product_kwargs['lazy_root_el'] = lazy_product
+            else:
+                request = self.send_request(
+                    'ProductGetRq', {'Number': part['Number']})
+                root = request.find('FbiMsgsRs').find('ProductGetRs')
+                if root.get('statusCode') != statuscodes.SUCCESS:
+                    continue
+                product_kwargs['root_el'] = root[0]
+            product = objects.Product(**product_kwargs)
+            products.append(product)
+        return products
 
 
 def check_status(code, expected=statuscodes.SUCCESS):

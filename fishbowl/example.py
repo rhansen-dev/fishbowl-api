@@ -16,9 +16,11 @@ Then run::
     python fishbowl/__init__.py
 """
 
-# import datetime
+import datetime
 import logging
 import os
+import sys
+import json
 from lxml import etree
 
 from fishbowl.api import Fishbowl
@@ -54,6 +56,14 @@ def run():
 
     fishbowl = Fishbowl()
     fishbowl.connect(**connect_options)
+
+    if len(sys.argv) > 1:
+        value = None
+        if len(sys.argv) > 2:
+            value = json.loads(sys.argv[2])
+        response = fishbowl.send_request(sys.argv[1], value)
+        return etree.tostring(response)
+
     # fishbowl.send_request(
     #     'GetSOListRq',
     #     {
@@ -64,5 +74,6 @@ def run():
     # with open('LightPartListRq.xml', 'w') as f:
     #     f.write(etree.tostring(fishbowl.send_request('LightPartListRq')))
     # response = fishbowl.send_request('GetShipListRq')
-    response = fishbowl.send_request('CustomerListRq')
+
+    response = fishbowl.send_request('CustomerNameListRq')
     return etree.tostring(response)
