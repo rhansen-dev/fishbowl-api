@@ -35,7 +35,8 @@ class Fishbowl:
     """
     Fishbowl API.
 
-    Example usage:
+    Example usage::
+
         fishbowl = Fishbowl()
         fishbowl.connect(username='admin', password='admin')
     """
@@ -119,10 +120,24 @@ class Fishbowl:
         return packed_length + msg
 
     @require_connected
+    def send_request(self, name, value=None):
+        """
+        Send a simple request to the API that follows the standard method.
+
+        :param name: The syntax of the base XML node for the request
+        :param value: A string containing the text of the base node, or a
+            dictionary mapping to children nodes and their values
+        """
+        request = xmlrequests.SimpleRequest(name, value, key=self.key)
+        return self.send_message(request)
+
+    @require_connected
     def send_message(self, msg):
         """
         Send a message to the API and return the root element of the XML that
         comes back as a response.
+
+        For higher level usage, see :meth:`send_request`.
         """
         if isinstance(msg, xmlrequests.Request):
             msg = msg.request
@@ -164,6 +179,13 @@ class Fishbowl:
         response = response.decode(self.encoding)
         logger.debug('Response received:\n' + response)
         return etree.fromstring(response)
+
+    def get_objects(self, response, response_node_name, object, node_name):
+        obj_list = []
+        base = response.find('FbiMsgsRs').find(response_node_name)
+        for node in base.iter(node_name):
+            obj_list.append(object(root_el=node))
+        return obj_list
 
     @require_connected
     def add_inventory(self, partnum, qty, uomid, cost, loctagnum):
@@ -209,6 +231,8 @@ class Fishbowl:
     def get_customers(self):
         """
         Get customers.
+
+        :returns: A list of lazy :cls:`fishbowl.objects.Customer` objects
         """
         customers = []
         request = self.send_request('CustomerNameListRq')
@@ -226,9 +250,6 @@ class Fishbowl:
         return customers
 
     @require_connected
-    def send_request(self, name, value=None):
-        request = xmlrequests.SimpleRequest(name, value, key=self.key)
-        return self.send_message(request)
 
 
 def check_status(code, expected=statuscodes.SUCCESS):

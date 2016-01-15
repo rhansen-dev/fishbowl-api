@@ -30,6 +30,7 @@ def all_fishbowl_objects():
 
 @six.python_2_unicode_compatible
 class FishbowlObject(collections.Mapping):
+    id_field = None
     name_attr = None
 
     def __init__(self, root_el=None, lazy_root_el=None, name=None):
@@ -43,11 +44,17 @@ class FishbowlObject(collections.Mapping):
     def __str__(self):
         if self.name:
             return self.name
-        if self.name_attr:
-            value = self
-            for attr in self.name_attr.split('.'):
-                value = value[attr]
+        if not self.name_attr:
+            return ''
+        value = self
+        for attr in self.name_attr.split('.'):
+            value = value[attr]
         return value or ''
+
+    def __bool__(self):
+        return bool(self.mapped)
+
+    __nonzero__ = __bool__
 
     @property
     def mapped(self):
@@ -61,7 +68,10 @@ class FishbowlObject(collections.Mapping):
 
     def parse_fields(self, base_el, fields):
         output = {}
-        for field_name, parser in fields.items():
+        items = fields.items()
+        if self.id_field and 'ID' not in fields:
+            items.append(('ID', int))
+        for field_name, parser in items:
             el = self.get_child(base_el, field_name)
             if el is None:
                 continue
@@ -90,6 +100,10 @@ class FishbowlObject(collections.Mapping):
                     except Exception:
                         continue
             output[field_name] = value
+        if self.id_field and self.id_field not in output:
+            value = output.pop('ID', None)
+            if value:
+                output[self.id_field] = value
         return output
 
     def get_child(self, el, name):
@@ -226,12 +240,25 @@ class Customer(FishbowlObject):
     }
 
 
+class UOM(FishbowlObject):
+    fields = {
+        'UOMID': int,
+        'Name': None,
+        'Code': None,
+        'Integral': fishbowl_boolean,
+        'Active': fishbowl_boolean,
+        'Type': None,
+    }
+
+
 class Part(FishbowlObject):
+    id_field = 'PartID'
     fields = {
         'PartID': int,
         'PartClassID': int,
         'TypeID': int,
-        'UOM': int,
+        'UOM': UOM,
+        'UOMID': int,   # Used for light parts
         'Num': None,
         'Description': None,
         'Manufacturer': None,
