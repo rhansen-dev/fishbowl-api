@@ -151,7 +151,7 @@ class Fishbowl:
         except etree.XMLSyntaxError:
             pass
         logger.info('Sending message ({})'.format(tag))
-        logger.debug('Sending message:\n' + msg)
+        logger.debug('Sending message:\n' + msg.decode(self.encoding))
         self.stream.send(self.pack_message(msg))
 
         # Get response

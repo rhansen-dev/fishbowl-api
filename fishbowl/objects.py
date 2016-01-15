@@ -68,7 +68,7 @@ class FishbowlObject(collections.Mapping):
 
     def parse_fields(self, base_el, fields):
         output = {}
-        items = fields.items()
+        items = list(fields.items())
         if self.id_field and 'ID' not in fields:
             items.append(('ID', int))
         for field_name, parser in items:
