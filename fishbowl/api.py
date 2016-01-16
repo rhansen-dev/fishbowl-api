@@ -5,6 +5,7 @@ import struct
 import hashlib
 import functools
 import logging
+from functools import partial
 from lxml import etree
 
 from . import xmlrequests, statuscodes, objects
@@ -120,16 +121,32 @@ class Fishbowl:
         return packed_length + msg
 
     @require_connected
-    def send_request(self, name, value=None):
+    def send_request(
+            self, name, value=None, response_node_name=None, single=True):
         """
         Send a simple request to the API that follows the standard method.
 
         :param name: The syntax of the base XML node for the request
         :param value: A string containing the text of the base node, or a
             dictionary mapping to children nodes and their values
+        :param response_node_name: Find and return this base response XML node
+        :param single: Expect and return the single child of
+            ``response_node_name`` (default ``True``)
         """
         request = xmlrequests.SimpleRequest(name, value, key=self.key)
-        return self.send_message(request)
+        root = self.send_message(request)
+        if response_node_name:
+            root = root.find('FbiMsgsRs').find(response_node_name)
+            status_code = root.get('statusCode')
+            if status_code is None or status_code == statuscodes.SUCCESS:
+                if single:
+                    if len(root):
+                        root = root[0]
+                    else:
+                        root = etree.Element('empty')
+            else:
+                root = etree.Element('empty')
+        return root
 
     @require_connected
     def send_message(self, msg):
@@ -179,13 +196,6 @@ class Fishbowl:
         response = response.decode(self.encoding)
         logger.debug('Response received:\n' + response)
         return etree.fromstring(response)
-
-    def get_objects(self, response, response_node_name, object, node_name):
-        obj_list = []
-        base = response.find('FbiMsgsRs').find(response_node_name)
-        for node in base.iter(node_name):
-            obj_list.append(object(root_el=node))
-        return obj_list
 
     @require_connected
     def add_inventory(self, partnum, qty, uomid, cost, loctagnum):
@@ -237,39 +247,35 @@ class Fishbowl:
         customers = []
         request = self.send_request('CustomerNameListRq')
         for tag in request.find('FbiMsgsRs').iter('Name'):
-
-            def lazy_customer():
-                customer_req = self.send_request(
-                    'CustomerGetRq', {'Name': tag.text})
-                root = customer_req.find('FbiMsgsRs')
-                return root.find('CustomerGetRs')[0]
-
+            get_customer = partial(
+                self.send_request, 'CustomerGetRq', {'Name': tag.text},
+                response_node_name='CustomerGetRs')
             customer = objects.Customer(
-                lazy_root_el=lazy_customer, name=tag.text)
+                lazy_root_el=get_customer, name=tag.text)
             customers.append(customer)
         return customers
 
-    @require_connected
-    def get_vendors(self):
-        """
-        Get a list of vendors.
+    # @require_connected
+    # def get_vendors(self):
+    #     """
+    #     Get a list of vendors.
 
-        :returns: A list of vendor names
-        """
-        customers = []
-        request = self.send_request('VendorNameListRq')
-        for tag in request.find('FbiMsgsRs').iter('Name'):
+    #     :returns: A list of vendor names
+    #     """
+    #     customers = []
+    #     request = self.send_request('VendorNameListRq')
+    #     for tag in request.find('FbiMsgsRs').iter('Name'):
 
-            def lazy_customer():
-                customer_req = self.send_request(
-                    'CustomerGetRq', {'Name': tag.text})
-                root = customer_req.find('FbiMsgsRs')
-                return root.find('CustomerGetRs')[0]
+    #         def lazy_customer():
+    #             customer_req = self.send_request(
+    #                 'CustomerGetRq', {'Name': tag.text})
+    #             root = customer_req.find('FbiMsgsRs')
+    #             return root.find('CustomerGetRs')[0]
 
-            customer = objects.Customer(
-                lazy_root_el=lazy_customer, name=tag.text)
-            customers.append(customer)
-        return customers
+    #         customer = objects.Customer(
+    #             lazy_root_el=lazy_customer, name=tag.text)
+    #         customers.append(customer)
+    #     return customers
 
     @require_connected
     def get_parts(self, populate_uoms=True):
@@ -280,14 +286,16 @@ class Fishbowl:
             (default ``True``)
         :returns: A list of cls:`fishbowl.objects.Part`
         """
-        response = self.send_request('LightPartListRq')
-        parts = self.get_objects(
-            response, 'LightPartListRs', objects.Part, 'LightPart')
+        response = self.send_request(
+            'LightPartListRq', response_node_name='LightPartListRs',
+            single=False)
+        parts = [objects.Part(node) for node in response.iter('LightPart')]
         if populate_uoms:
-            response = self.send_request('UOMRq')
+            response = self.send_request(
+                'UOMRq', response_node_name='UOMRs', single=False)
             uom_map = dict(
                 (uom['UOMID'], uom) for uom in
-                self.get_objects(response, 'UOMRs', objects.UOM, 'UOM'))
+                [objects.UOM(node) for node in response.iter('UOM')])
             for part in parts:
                 uomid = part.get('UOMID')
                 if not uomid:
@@ -312,18 +320,16 @@ class Fishbowl:
         :returns: A list of cls:`fishbowl.objects.Product`
         """
         products = []
+        added = []
         for part in self.get_parts(populate_uoms=False):
             part_number = part.get('Num')
-            if not part_number:
+            # Skip parts without a number, and duplicates.
+            if not part_number or part_number in added:
                 continue
 
-            def get_product():
-                inner_req = self.send_request(
-                    'ProductGetRq', {'Number': part_number})
-                root = inner_req.find('FbiMsgsRs').find('ProductGetRs')
-                if root.get('statusCode') == statuscodes.SUCCESS and len(root):
-                    return root[0]
-                return etree.Element('empty')
+            get_product = partial(
+                self.send_request, 'ProductGetRq', {'Number': part_number},
+                response_node_name='ProductGetRs')
 
             product_kwargs = {
                 'name': part_number,
@@ -337,6 +343,7 @@ class Fishbowl:
                 product_kwargs['root_el'] = product_node
             product = objects.Product(**product_kwargs)
             products.append(product)
+            added.append(part_number)
         return products
 
 
