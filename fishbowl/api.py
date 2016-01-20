@@ -238,6 +238,17 @@ class Fishbowl:
         return self.send_message(request)
 
     @require_connected
+    def get_taxrates(self):
+        """
+        Get tax rates.
+
+        :returns: A list of :cls:`fishbowl.objects.TaxRate` objects
+        """
+        response = self.send_request(
+            'TaxRateGetRq', response_node_name='TaxRateGetRs', single=False)
+        return [objects.TaxRate(node) for node in response.iter('TaxRate')]
+
+    @require_connected
     def get_customers(self):
         """
         Get customers.
