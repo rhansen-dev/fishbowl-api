@@ -33,12 +33,12 @@ class FishbowlObject(collections.Mapping):
     id_field = None
     name_attr = None
 
-    def __init__(self, root_el=None, lazy_root_el=None, name=None):
-        if not (root_el is None) ^ (lazy_root_el is None):
-            raise AttributeError('Expected either root_el or lazy_root_el')
-        self._lazy_load = lazy_root_el
-        if root_el is not None:
-            self.mapped = self.parse_fields(root_el, self.fields)
+    def __init__(self, data=None, lazy_data=None, name=None):
+        if not (data is None) ^ (lazy_data is None):
+            raise AttributeError('Expected either data or lazy_data')
+        self._lazy_load = lazy_data
+        if data is not None:
+            self.mapped = self.parse_fields(data, self.fields)
         self.name = name
 
     def __str__(self):
@@ -66,34 +66,40 @@ class FishbowlObject(collections.Mapping):
     def mapped(self, value):
         self._mapped = value
 
-    def parse_fields(self, base_el, fields):
+    def parse_fields(self, data, fields):
+        if data is None:
+            return {}
+        if not isinstance(data, dict):
+            data = self.get_xml_data(data)
         output = {}
         items = list(fields.items())
         if self.id_field and 'ID' not in fields:
             items.append(('ID', int))
+        # Load the data in without case sensitivity.
+        data_map = dict((k.lower(), k) for k in data)
         for field_name, parser in items:
-            el = self.get_child(base_el, field_name)
-            if el is None:
+            key = data_map.get(field_name.lower())
+            value = data.get(key)
+            if value is None:
                 continue
             if isinstance(parser, dict):
-                value = self.parse_fields(el, parser)
+                if not value:
+                    continue
+                value = self.parse_fields(value[0], parser)
             elif isinstance(parser, list):
                 value = []
                 if parser:
                     classes = dict((cls.__name__, cls) for cls in parser)
                 else:
                     classes = all_fishbowl_objects()
-                for child in el:
+                for child in value:
                     child_parser = classes.get(child.tag)
                     if not child_parser:
                         continue
                     value.append(child_parser(child))
             elif isinstance(parser, FishbowlObject):
-                value = parser(el)
+                value = parser(data)
             else:
-                value = el.text
-                if value is None:
-                    continue
                 if parser:
                     try:
                         value = parser(value)
@@ -106,10 +112,15 @@ class FishbowlObject(collections.Mapping):
                 output[self.id_field] = value
         return output
 
-    def get_child(self, el, name):
-        for child in el:
-            if child.tag == name:
-                return child
+    def get_xml_data(self, base_el):
+        data = {}
+        for child in base_el:
+            children = len(child)
+            if children:
+                data[child.tag] = [self.get_xml_data(el) for el in child]
+            else:
+                data[child.tag] = child.text
+        return data
 
     def __getitem__(self, key):
         return self.mapped[key]
@@ -165,6 +176,23 @@ class CustomField(FishbowlObject):
     }
 
 
+class State(FishbowlObject):
+    fields = {
+        'ID': int,
+        'Code': None,
+        'Name': None,
+        'CountryID': int,
+    }
+
+
+class Country(FishbowlObject):
+    fields = {
+        'ID': int,
+        'Name': None,
+        'Code': None,
+    }
+
+
 class Address(FishbowlObject):
     fields = {
         'ID': int,
@@ -181,17 +209,8 @@ class Address(FishbowlObject):
         'Default': fishbowl_boolean,
         'Residential': fishbowl_boolean,
         'Type': None,
-        'State': {
-            'ID': int,
-            'Code': None,
-            'Name': None,
-            'CountryID': int,
-        },
-        'Country': {
-            'ID': int,
-            'Name': None,
-            'Code': None,
-        },
+        'State': State,
+        'Country': Country,
         'AddressInformationList': {
             'AddressInformation': {
                 'ID': int,
@@ -206,8 +225,6 @@ class Address(FishbowlObject):
 
 class Customer(FishbowlObject):
     fields = {
-        'CustomerID': int,
-        'AccountID': int,
         'CustomerID': int,
         'AccountID': int,
         'Status': None,

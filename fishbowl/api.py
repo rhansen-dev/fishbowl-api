@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import base64
+import csv
 import socket
 import struct
 import hashlib
@@ -7,6 +8,11 @@ import functools
 import logging
 from functools import partial
 from lxml import etree
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 from . import xmlrequests, statuscodes, objects
 
@@ -149,6 +155,21 @@ class Fishbowl:
         return root
 
     @require_connected
+    def send_query(self, query):
+        """
+        Send a SQL query to be executed on the server, returning a
+        ``DictReader`` containing the rows returned as a list of dictionaries.
+        """
+        response = self.send_request(
+            'ExecuteQueryRq', {'Query': query},
+            response_node_name='ExecuteQueryRs')
+        csvfile = StringIO()
+        for row in response.iter('Row'):
+            csvfile.write(row.text.encode('utf-8') + b'\n')
+        csvfile.seek(0)
+        return csv.DictReader(csvfile)
+
+    @require_connected
     def send_message(self, msg):
         """
         Send a message to the API and return the root element of the XML that
@@ -261,32 +282,17 @@ class Fishbowl:
             get_customer = partial(
                 self.send_request, 'CustomerGetRq', {'Name': tag.text},
                 response_node_name='CustomerGetRs')
-            customer = objects.Customer(
-                lazy_root_el=get_customer, name=tag.text)
+            customer = objects.Customer(lazy_data=get_customer, name=tag.text)
             customers.append(customer)
         return customers
 
-    # @require_connected
-    # def get_vendors(self):
-    #     """
-    #     Get a list of vendors.
-
-    #     :returns: A list of vendor names
-    #     """
-    #     customers = []
-    #     request = self.send_request('VendorNameListRq')
-    #     for tag in request.find('FbiMsgsRs').iter('Name'):
-
-    #         def lazy_customer():
-    #             customer_req = self.send_request(
-    #                 'CustomerGetRq', {'Name': tag.text})
-    #             root = customer_req.find('FbiMsgsRs')
-    #             return root.find('CustomerGetRs')[0]
-
-    #         customer = objects.Customer(
-    #             lazy_root_el=lazy_customer, name=tag.text)
-    #         customers.append(customer)
-    #     return customers
+    @require_connected
+    def get_uom_map(self):
+        response = self.send_request(
+            'UOMRq', response_node_name='UOMRs', single=False)
+        return dict(
+            (uom['UOMID'], uom) for uom in
+            [objects.UOM(node) for node in response.iter('UOM')])
 
     @require_connected
     def get_parts(self, populate_uoms=True):
@@ -302,11 +308,7 @@ class Fishbowl:
             single=False)
         parts = [objects.Part(node) for node in response.iter('LightPart')]
         if populate_uoms:
-            response = self.send_request(
-                'UOMRq', response_node_name='UOMRs', single=False)
-            uom_map = dict(
-                (uom['UOMID'], uom) for uom in
-                [objects.UOM(node) for node in response.iter('UOM')])
+            uom_map = self.get_uom_map()
             for part in parts:
                 uomid = part.get('UOMID')
                 if not uomid:
@@ -356,6 +358,63 @@ class Fishbowl:
             products.append(product)
             added.append(part_number)
         return products
+
+    @require_connected
+    def get_products_fast(self, populate_uoms=True):
+        products = []
+        if populate_uoms:
+            uom_map = self.get_uom_map()
+        for row in self.send_query('SELECT * FROM PRODUCT'):
+            product = objects.Product(row)
+            if not product:
+                continue
+            if populate_uoms:
+                uomid = row.get('UOMID')
+                if uomid:
+                    uom = uom_map.get(int(uomid))
+                    if uom:
+                        product.mapped['UOM'] = uom
+            products.append(product)
+        return products
+
+    @require_connected
+    def get_customers_fast(self, populate_addresses=True):
+        customers = []
+        # contact_map = dict(
+        #     (contact['ACCOUNTID'], contact['NAME']) for contact in
+        #     self.send_query('SELECT * FROM CONTACT'))
+        if populate_addresses:
+            country_map = {}
+            for country in self.send_query('SELECT * FROM COUNTRYCONST'):
+                country['CODE'] = country['ABBREVIATION']
+                country_map[country['ID']] = objects.Country(country)
+            state_map = dict(
+                (state['ID'], objects.State(state))
+                for state in self.send_query('SELECT * FROM STATECONST'))
+            address_map = {}
+            for addr in self.send_query('SELECT * FROM ADDRESS'):
+                addresses = address_map.setdefault(addr['ACCOUNTID'], [])
+                address = objects.Address(addr)
+                if address:
+                    country = country_map.get(addr['COUNTRYID'])
+                    if country:
+                        address.mapped['Country'] = country
+                    state = state_map.get(addr['STATEID'])
+                    if state:
+                        address.mapped['State'] = state
+                    addresses.append(address)
+        for row in self.send_query('SELECT * FROM CUSTOMER'):
+            customer = objects.Customer(row)
+            if not customer:
+                continue
+            # contact = contact_map.get(row['ACCOUNTID'])
+            # if contact:
+            #     customer.mapped['Attn'] = contact['NAME']
+            if populate_addresses:
+                customer.mapped['Addresses'] = (
+                    address_map.get(row['ACCOUNTID'], []))
+            customers.append(customer)
+        return customers
 
 
 def check_status(code, expected=statuscodes.SUCCESS):
