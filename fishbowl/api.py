@@ -128,7 +128,8 @@ class Fishbowl:
 
     @require_connected
     def send_request(
-            self, name, value=None, response_node_name=None, single=True):
+            self, name, value=None, response_node_name=None, single=True,
+            silence_errors=False):
         """
         Send a simple request to the API that follows the standard method.
 
@@ -138,20 +139,25 @@ class Fishbowl:
         :param response_node_name: Find and return this base response XML node
         :param single: Expect and return the single child of
             ``response_node_name`` (default ``True``)
+        :param silence_errors: Return an empty XML node rather than raising an
+            error if the response returns an unexpected status code (default
+            ``False``)
         """
         request = xmlrequests.SimpleRequest(name, value, key=self.key)
         root = self.send_message(request)
         if response_node_name:
             root = root.find('FbiMsgsRs').find(response_node_name)
-            status_code = root.get('statusCode')
-            if status_code is None or status_code == statuscodes.SUCCESS:
-                if single:
-                    if len(root):
-                        root = root[0]
-                    else:
-                        root = etree.Element('empty')
-            else:
-                root = etree.Element('empty')
+            try:
+                check_status(root.get('statusCode'), allow_none=True)
+            except FishbowlError:
+                if silence_errors:
+                    return etree.Element('empty')
+                raise
+            if single:
+                if len(root):
+                    root = root[0]
+                else:
+                    root = etree.Element('empty')
         return root
 
     @require_connected
@@ -417,11 +423,11 @@ class Fishbowl:
         return customers
 
 
-def check_status(code, expected=statuscodes.SUCCESS):
+def check_status(code, expected=statuscodes.SUCCESS, allow_none=False):
     """
     Check a status code, raising an exception if it wasn't the expected code.
     """
     message = statuscodes.get_status(code)
-    if code != expected:
+    if code != expected and (code is not None or not allow_none):
         raise FishbowlError(message)
     return message
