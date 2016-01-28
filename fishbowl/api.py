@@ -94,9 +94,7 @@ class Fishbowl:
                 if element.tag == 'Key':
                     self.key = element.text
                 if element.tag in ('loginRs', 'LoginRs', 'FbiMsgsRs'):
-                    status_code = element.get('statusCode')
-                    if status_code:
-                        check_status(status_code)
+                    check_status(element, allow_none=True)
 
             if not self.key:
                 raise FishbowlError('No login key in response')
@@ -148,7 +146,7 @@ class Fishbowl:
         if response_node_name:
             root = root.find('FbiMsgsRs').find(response_node_name)
             try:
-                check_status(root.get('statusCode'), allow_none=True)
+                check_status(root, allow_none=True)
             except FishbowlError:
                 if silence_errors:
                     return etree.Element('empty')
@@ -233,9 +231,7 @@ class Fishbowl:
             partnum, qty, uomid, cost, loctagnum, key=self.key)
         response = self.send_message(request)
         for element in response.iter('AddInventoryRs'):
-            status_code = element.get('statusCode')
-            if status_code:
-                check_status(status_code)
+            check_status(element, allow_none=True)
             logger.info(','.join([
                 '{}'.format(val)
                 for val in ['add_inv', partnum, qty, uomid, cost, loctagnum]]))
@@ -249,9 +245,7 @@ class Fishbowl:
             partnum, qty, locationid, key=self.key)
         response = self.send_message(request)
         for element in response.iter('CycleCountRs'):
-            status_code = element.get('statusCode')
-            if status_code:
-                check_status(status_code)
+            check_status(element, allow_none=True)
             logger.info(','.join([
                 '{}'.format(val)
                 for val in ['cycle_inv', partnum, qty, locationid]]))
@@ -423,11 +417,15 @@ class Fishbowl:
         return customers
 
 
-def check_status(code, expected=statuscodes.SUCCESS, allow_none=False):
+def check_status(element, expected=statuscodes.SUCCESS, allow_none=False):
     """
-    Check a status code, raising an exception if it wasn't the expected code.
+    Check the status code from an XML node, raising an exception if it wasn't
+    the expected code.
     """
-    message = statuscodes.get_status(code)
+    code = element.get('statusCode')
+    message = element.get('statusMessage')
+    if message is None:
+        message = statuscodes.get_status(code)
     if code != expected and (code is not None or not allow_none):
         raise FishbowlError(message)
     return message
