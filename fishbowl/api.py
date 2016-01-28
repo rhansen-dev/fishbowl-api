@@ -354,12 +354,12 @@ class Fishbowl:
                 'name': part_number,
             }
             if lazy:
-                product_kwargs['lazy_root_el'] = get_product
+                product_kwargs['lazy_data'] = get_product
             else:
                 product_node = get_product()
                 if not len(product_node):
                     continue
-                product_kwargs['root_el'] = product_node
+                product_kwargs['data'] = product_node
             product = objects.Product(**product_kwargs)
             products.append(product)
             added.append(part_number)
