@@ -133,14 +133,16 @@ class Fishbowl:
 
     @require_connected
     def send_request(
-            self, name, value=None, response_node_name=None, single=True,
+            self, request, value=None, response_node_name=None, single=True,
             silence_errors=False):
         """
         Send a simple request to the API that follows the standard method.
 
-        :param name: The syntax of the base XML node for the request
+        :param request: A :cls:`fishbowl.xmlrequests.Request` instance, or text
+            containing the name of the base XML node to create
         :param value: A string containing the text of the base node, or a
-            dictionary mapping to children nodes and their values
+            dictionary mapping to children nodes and their values (only used if
+            request is just the text node name)
         :param response_node_name: Find and return this base response XML node
         :param single: Expect and return the single child of
             ``response_node_name`` (default ``True``)
@@ -148,7 +150,8 @@ class Fishbowl:
             error if the response returns an unexpected status code (default
             ``False``)
         """
-        request = xmlrequests.SimpleRequest(name, value, key=self.key)
+        if isinstance(request, six.string_types):
+            request = xmlrequests.SimpleRequest(request, value, key=self.key)
         root = self.send_message(request)
         if response_node_name:
             root = root.find('FbiMsgsRs').find(response_node_name)
