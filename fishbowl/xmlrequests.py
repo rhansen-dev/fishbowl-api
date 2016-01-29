@@ -1,5 +1,9 @@
+from __future__ import unicode_literals
+
 import datetime
 from lxml import etree
+
+import six
 
 
 class Request(object):
@@ -34,6 +38,63 @@ class Request(object):
 
     def add_request_element(self, name):
         return etree.SubElement(self.el_request, name)
+
+    def add_data(self, name, data):
+        """
+        Generate a request from a data dictionary.
+
+        To create a node hierarchy, the values can be dicts or lists (which
+        must contain dicts). For example::
+
+            .add_data(
+                'root-name',
+                data={
+                    'outer': {'inner': 0},
+                    'items': [{'item': 1}, {'item': 2}],
+                })
+
+            <FbiXml>
+              <Ticket>
+                <Key>eCWMhC5n/E48OP7307qmZg==</Key>
+              </Ticket>
+              <FbiMsgsRq>
+                <root-name>
+                  <outer>
+                    <inner>0</inner>
+                  </outer>
+                  <items>
+                    <item>1</item>
+                    <item>2</item>
+                  </items>
+                </root-name>
+              </FbiMsgsRq>
+            </FbiXml
+
+        """
+        self._add_data(self.el_request, {name: data})
+
+    def _add_data(self, el, data):
+        for k, v in six.iteritems(data):
+            child = etree.SubElement(el, k)
+            if isinstance(v, (tuple, list)):
+                for inner_data in v:
+                    self._add_data(child, inner_data)
+                continue
+            if isinstance(v, dict):
+                self._add_data(child, v)
+                continue
+            v = self.format_data_value(v)
+            child.text = self.format_data_value(v)
+
+    def format_data_value(self, value):
+        """
+        Returns a data value formatted as text.
+        """
+        if isinstance(value, bool):
+            value = 'true' if value else 'false'
+        elif isinstance(value, datetime.datetime):
+            value = value.strftime('%Y-%m-%dT%H:%M:%S')
+        return '%s' % value
 
 
 class Login(Request):
