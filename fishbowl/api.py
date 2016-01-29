@@ -6,14 +6,10 @@ import struct
 import hashlib
 import functools
 import logging
+from io import StringIO
 from functools import partial
 from lxml import etree
 import six
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 from . import xmlrequests, statuscodes, objects
 
