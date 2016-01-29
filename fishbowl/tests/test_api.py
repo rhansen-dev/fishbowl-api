@@ -23,6 +23,12 @@ ADD_INVENTORY_XML = '''
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
+ADD_INVENTORY_XML_FAIL = '''
+<FbiXml>
+<AddInventoryRs statusCode={0!r}></AddInventoryRs>
+</FbiXml>
+'''.format('').encode('ascii')
+
 CYCLE_INVENTORY_XML = '''
 <FbiXml>
 <CycleCountRs statusCode={0!r}></CycleCountRs>
@@ -128,6 +134,13 @@ class APITest(TestCase):
         self.connect()
         self.set_response_xml(ADD_INVENTORY_XML)
         self.api.add_inventory(
+            partnum=1, qty=1, uomid=1, cost=100, loctagnum=1)
+
+    def test_add_inventory_fail(self):
+        self.connect()
+        self.set_response_xml(ADD_INVENTORY_XML_FAIL)
+        self.assertRaises(
+            TypeError, self.api.add_inventory,
             partnum=1, qty=1, uomid=1, cost=100, loctagnum=1)
 
     def test_cycle_inventory(self):

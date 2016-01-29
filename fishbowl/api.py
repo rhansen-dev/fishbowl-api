@@ -8,6 +8,7 @@ import functools
 import logging
 from functools import partial
 from lxml import etree
+import six
 
 try:
     from cStringIO import StringIO
@@ -17,6 +18,12 @@ except ImportError:
 from . import xmlrequests, statuscodes, objects
 
 logger = logging.getLogger(__name__)
+
+
+def UnicodeDictReader(utf8_data, **kwargs):
+    csv_reader = csv.DictReader(utf8_data, **kwargs)
+    for row in csv_reader:
+        yield {key: value.decode('utf-8') for key, value in six.iteritems(row)}
 
 
 class FishbowlError(Exception):
@@ -171,7 +178,7 @@ class Fishbowl:
         for row in response.iter('Row'):
             csvfile.write(row.text.encode('utf-8') + b'\n')
         csvfile.seek(0)
-        return csv.DictReader(csvfile)
+        return UnicodeDictReader(csvfile)
 
     @require_connected
     def send_message(self, msg):
