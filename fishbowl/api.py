@@ -6,7 +6,7 @@ import struct
 import hashlib
 import functools
 import logging
-from io import StringIO
+import sys
 from functools import partial
 from lxml import etree
 import six
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def UnicodeDictReader(utf8_data, **kwargs):
     csv_reader = csv.DictReader(utf8_data, **kwargs)
     for row in csv_reader:
-        yield {key: value.decode('utf-8') for key, value in six.iteritems(row)}
+        yield {key: value for key, value in six.iteritems(row)}
 
 
 class FishbowlError(Exception):
@@ -76,7 +76,7 @@ class Fishbowl:
         Open socket stream, set timeout, and log in.
         """
         password = base64.b64encode(
-            hashlib.md5(password.encode(self.encoding)).digest())
+            hashlib.md5(password.encode(self.encoding)).digest()).decode('ascii')
 
         if self.connected:
             self.close()
@@ -173,9 +173,16 @@ class Fishbowl:
         response = self.send_request(
             'ExecuteQueryRq', {'Query': query},
             response_node_name='ExecuteQueryRs')
-        csvfile = StringIO()
+        csvfile = six.StringIO()
         for row in response.iter('Row'):
-            csvfile.write(row.text.encode('utf-8') + b'\n')
+            # csv.DictReader API changed
+            if sys.version_info < (3,):
+                # Python 2 wants utf-8 or ASCII bytes
+                text = row.text.encode('utf-8') + b'\n'
+            else:
+                # Python 3 wants a string
+                text = row.text + u'\n'
+            csvfile.write(text)
         csvfile.seek(0)
         return UnicodeDictReader(csvfile)
 
