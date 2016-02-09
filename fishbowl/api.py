@@ -211,7 +211,7 @@ class Fishbowl:
 
         # Get response
         byte_count = 0
-        response = b''
+        response = bytearray()
         received_length = False
         try:
             packed_length = self.stream.recv(4)
@@ -220,10 +220,7 @@ class Fishbowl:
             while byte_count < length:
                 byte = self.stream.recv(1)
                 byte_count += 1
-                try:
-                    response += byte.to_bytes(1, 'big')
-                except AttributeError:   # Python 2
-                    response += bytes(byte)
+                response.append(ord(byte))
         except socket.timeout:
             self.close(skip_errors=True)
             if received_length:
