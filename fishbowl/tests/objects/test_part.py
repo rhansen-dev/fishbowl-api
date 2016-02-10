@@ -24,4 +24,12 @@ class PartTest(utils.ObjectTest):
         'TypeID': 10,
         'Weight': 0,
         'Width': 0,
+        'UOM': {
+            'Active': True,
+            'Code': 'ea',
+            'Integral': True,
+            'Name': 'Each',
+            'Type': 'Count',
+            'UOMID': 1,
+        },
     }

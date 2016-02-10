@@ -86,18 +86,22 @@ class FishbowlObject(collections.Mapping):
             if isinstance(parser, dict):
                 if not value:
                     continue
-                value = self.parse_fields(value[0], parser)
+                if isinstance(value, list):
+                    value = value[0]
+                value = self.parse_fields(value, parser)
             elif isinstance(parser, list):
-                value = []
+                new_value = []
                 if parser:
                     classes = dict((cls.__name__, cls) for cls in parser)
                 else:
                     classes = all_fishbowl_objects()
                 for child in value:
-                    child_parser = classes.get(child.tag)
+                    tag, child_data = child.items()[0]
+                    child_parser = classes.get(tag)
                     if not child_parser:
                         continue
-                    value.append(child_parser(child))
+                    new_value.append(child_parser(child_data))
+                value = new_value
             elif isinstance(parser, FishbowlObject):
                 value = parser(data)
             else:
@@ -119,7 +123,14 @@ class FishbowlObject(collections.Mapping):
             children = len(child)
             key = child.tag.decode(self.encoding)
             if children:
-                data[key] = [self.get_xml_data(el) for el in child]
+                if filter(None, [el.text.strip() for el in child if el.text]):
+                    data[key] = self.get_xml_data(child)
+                else:
+                    inner = []
+                    for el in child:
+                        inner_key = el.tag.decode(self.encoding)
+                        inner.append({inner_key: self.get_xml_data(el)})
+                    data[key] = inner
             else:
                 value = child.text
                 if value is not None:
