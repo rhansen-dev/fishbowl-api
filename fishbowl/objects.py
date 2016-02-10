@@ -121,7 +121,10 @@ class FishbowlObject(collections.Mapping):
             if children:
                 data[key] = [self.get_xml_data(el) for el in child]
             else:
-                data[key] = child.text.decode(self.encoding)
+                value = child.text
+                if value is not None:
+                    value = value.decode(self.encoding)
+                data[key] = value
         return data
 
     def __getitem__(self, key):
