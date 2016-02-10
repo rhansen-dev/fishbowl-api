@@ -14,25 +14,25 @@ except ImportError:   # < Python 3.3
 LOGIN_SUCCESS = '''
 <FbiXml>
 <Key>ABC</Key>
-<loginRs statusCode={0!r}></loginRs>
+<loginRs statusCode="{}"></loginRs>
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
 ADD_INVENTORY_XML = '''
 <FbiXml>
-<AddInventoryRs statusCode={0!r}></AddInventoryRs>
+<AddInventoryRs statusCode="{}"></AddInventoryRs>
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
 ADD_INVENTORY_XML_FAIL = '''
 <FbiXml>
-<AddInventoryRs statusCode={0!r}></AddInventoryRs>
+<AddInventoryRs statusCode="{}"></AddInventoryRs>
 </FbiXml>
 '''.format('').encode('ascii')
 
 CYCLE_INVENTORY_XML = '''
 <FbiXml>
-<CycleCountRs statusCode={0!r}></CycleCountRs>
+<CycleCountRs statusCode="{0}"></CycleCountRs>
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
