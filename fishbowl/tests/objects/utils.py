@@ -14,4 +14,4 @@ class ObjectTest(TestCase):
             xml = xml_file.read()
         el = etree.fromstring(xml)
         object_instance = self.fishbowl_object(el)
-        self.assertEqual(object_instance.squash(), self.expected)
+        self.assertEqual(self.expected, object_instance.squash())

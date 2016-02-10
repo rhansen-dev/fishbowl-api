@@ -32,6 +32,7 @@ def all_fishbowl_objects():
 class FishbowlObject(collections.Mapping):
     id_field = None
     name_attr = None
+    encoding = 'latin-1'
 
     def __init__(self, data=None, lazy_data=None, name=None):
         if not (data is None) ^ (lazy_data is None):
@@ -116,10 +117,11 @@ class FishbowlObject(collections.Mapping):
         data = {}
         for child in base_el:
             children = len(child)
+            key = child.tag.decode(self.encoding)
             if children:
-                data[child.tag] = [self.get_xml_data(el) for el in child]
+                data[key] = [self.get_xml_data(el) for el in child]
             else:
-                data[child.tag] = child.text
+                data[key] = child.text.decode(self.encoding)
         return data
 
     def __getitem__(self, key):
