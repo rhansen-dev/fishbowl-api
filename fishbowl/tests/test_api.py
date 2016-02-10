@@ -141,7 +141,7 @@ class APITest(TestCase):
         self.connect()
         self.set_response_xml(ADD_INVENTORY_XML_FAIL)
         self.assertRaises(
-            TypeError, self.api.add_inventory,
+            api.FishbowlError, self.api.add_inventory,
             partnum=1, qty=1, uomid=1, cost=100, loctagnum=1)
 
     def test_cycle_inventory(self):
