@@ -15,6 +15,14 @@ from . import xmlrequests, statuscodes, objects
 
 logger = logging.getLogger(__name__)
 
+PRICING_RULES_SQL = (
+    'SELECT product.num, product.description, '
+    'p.patypeid, p.papercent, p.pabaseamounttypeid, p.paamount, '
+    'p.custmerincltypeid, p.customerinclid'
+    'from pricingrule p inner join product on p.productinclid = product.id '
+    'where p.isactive = 1 and p.productincltypeid = 2 and '
+    'p.customerincltypeid in (1, 2)')
+
 
 def UnicodeDictReader(utf8_data, **kwargs):
     csv_reader = csv.DictReader(utf8_data, **kwargs)
@@ -388,7 +396,27 @@ class Fishbowl:
         return products
 
     @require_connected
-    def get_customers_fast(self, populate_addresses=True):
+    def get_pricing_rules(self):
+        """
+        Get a list of pricing rules for products.
+
+        :returns: A dictionary of pricing rules, where each key is the customer
+            id and value a list of rules. A key of ``None`` is used for pricing
+            rules relevant to all customers.
+        """
+        pricing_rules = {None: []}
+        for row in self.send_query(PRICING_RULES_SQL):
+            if row.get('CUSTOMERINCLTYPEID') == 1:
+                customer_id = None
+            else:
+                customer_id = row.get('p.customerinclid')
+            customer_pricing = pricing_rules.setdefault(customer_id, [])
+            customer_pricing.append(row)
+        return pricing_rules
+
+    @require_connected
+    def get_customers_fast(
+            self, populate_addresses=True, populate_pricing_rules=False):
         customers = []
         # contact_map = dict(
         #     (contact['ACCOUNTID'], contact['NAME']) for contact in
@@ -413,6 +441,8 @@ class Fishbowl:
                     if state:
                         address.mapped['State'] = state
                     addresses.append(address)
+        if populate_pricing_rules:
+            pricing_rules = self.get_pricing_rules()
         for row in self.send_query('SELECT * FROM CUSTOMER'):
             customer = objects.Customer(row)
             if not customer:
@@ -423,6 +453,11 @@ class Fishbowl:
             if populate_addresses:
                 customer.mapped['Addresses'] = (
                     address_map.get(row['ACCOUNTID'], []))
+            if populate_pricing_rules:
+                rules = []
+                rules.extend(pricing_rules[None])
+                rules.extend(pricing_rules.get(customer['id'], []))
+                customer.mapped['PricingRules'] = rules
             customers.append(customer)
         return customers
 
