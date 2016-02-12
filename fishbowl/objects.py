@@ -95,12 +95,11 @@ class FishbowlObject(collections.Mapping):
                     classes = dict((cls.__name__, cls) for cls in parser)
                 else:
                     classes = all_fishbowl_objects()
-                for child in value:
-                    tag, child_data = child.items()[0]
+                for tag, child in value.items():
                     child_parser = classes.get(tag)
                     if not child_parser:
                         continue
-                    new_value.append(child_parser(child_data))
+                    new_value.append(child_parser(child))
                 value = new_value
             elif isinstance(parser, FishbowlObject):
                 value = parser(data)
