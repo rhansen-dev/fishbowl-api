@@ -16,9 +16,9 @@ from . import xmlrequests, statuscodes, objects
 logger = logging.getLogger(__name__)
 
 PRICING_RULES_SQL = (
-    'SELECT product.num, product.description, '
+    'SELECT product.num, '
     'p.patypeid, p.papercent, p.pabaseamounttypeid, p.paamount, '
-    'p.custmerincltypeid, p.customerinclid'
+    'p.customerincltypeid, p.customerinclid '
     'from pricingrule p inner join product on p.productinclid = product.id '
     'where p.isactive = 1 and p.productincltypeid = 2 and '
     'p.customerincltypeid in (1, 2)')
@@ -406,10 +406,12 @@ class Fishbowl:
         """
         pricing_rules = {None: []}
         for row in self.send_query(PRICING_RULES_SQL):
-            if row.get('CUSTOMERINCLTYPEID') == 1:
+            customer_type = row.pop('CUSTOMERINCLTYPEID')
+            customer_id = row.pop('CUSTOMERINCLID')
+            if customer_type == '1':
                 customer_id = None
             else:
-                customer_id = row.get('p.customerinclid')
+                customer_id = int(customer_id)
             customer_pricing = pricing_rules.setdefault(customer_id, [])
             customer_pricing.append(row)
         return pricing_rules
@@ -452,11 +454,11 @@ class Fishbowl:
             #     customer.mapped['Attn'] = contact['NAME']
             if populate_addresses:
                 customer.mapped['Addresses'] = (
-                    address_map.get(row['ACCOUNTID'], []))
+                    address_map.get(customer['AccountID'], []))
             if populate_pricing_rules:
                 rules = []
                 rules.extend(pricing_rules[None])
-                rules.extend(pricing_rules.get(customer['id'], []))
+                rules.extend(pricing_rules.get(customer['AccountID'], []))
                 customer.mapped['PricingRules'] = rules
             customers.append(customer)
         return customers
