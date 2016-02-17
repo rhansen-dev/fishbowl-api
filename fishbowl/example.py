@@ -75,8 +75,10 @@ def run():
     #     f.write(etree.tostring(fishbowl.send_request('LightPartListRq')))
     # response = fishbowl.send_request('GetShipListRq')
 
-    products = fishbowl.get_products()
-    # customers = fishbowl.get_customers_fast()
+    # products = fishbowl.get_products()
+    customers = fishbowl.get_customers_fast(populate_pricing_rules=True, 
+        populate_addresses=False)
+    # rules = fishbowl.get_pricing_rules()
     import ipdb; ipdb.set_trace()
 
     response = fishbowl.send_request('CustomerNameListRq')
