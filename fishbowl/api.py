@@ -288,7 +288,7 @@ class Fishbowl:
         return [objects.TaxRate(node) for node in response.iter('TaxRate')]
 
     @require_connected
-    def get_customers(self):
+    def get_customers(self, silence_lazy_errors=True):
         """
         Get customers.
 
@@ -299,7 +299,8 @@ class Fishbowl:
         for tag in request.find('FbiMsgsRs').iter('Name'):
             get_customer = partial(
                 self.send_request, 'CustomerGetRq', {'Name': tag.text},
-                response_node_name='CustomerGetRs')
+                response_node_name='CustomerGetRs',
+                silence_errors=silence_lazy_errors)
             customer = objects.Customer(lazy_data=get_customer, name=tag.text)
             customers.append(customer)
         return customers
