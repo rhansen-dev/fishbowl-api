@@ -300,7 +300,7 @@ class Part(FishbowlObject):
         'Manufacturer': None,
         'Details': None,
         'TagLabel': None,
-        'StandardCost': None,
+        'StandardCost': decimal.Decimal,
         'HasBOM': fishbowl_boolean,
         'Configurable': fishbowl_boolean,
         'ActiveFlag': fishbowl_boolean,

@@ -373,6 +373,7 @@ class Fishbowl:
                     continue
                 product_kwargs['data'] = product_node
             product = objects.Product(**product_kwargs)
+            product.part = part
             products.append(product)
             added.append(part_number)
         return products
@@ -382,7 +383,7 @@ class Fishbowl:
         products = []
         if populate_uoms:
             uom_map = self.get_uom_map()
-        for row in self.send_query('SELECT * FROM PRODUCT'):
+        for row in self.send_query('SELECT P.*, PART.STDCOST AS StandardCost FROM PRODUCT P INNER JOIN PART ON P.PARTID = PART.ID'):
             product = objects.Product(row)
             if not product:
                 continue
@@ -392,6 +393,7 @@ class Fishbowl:
                     uom = uom_map.get(int(uomid))
                     if uom:
                         product.mapped['UOM'] = uom
+            product.part = objects.Part(row)
             products.append(product)
         return products
 
