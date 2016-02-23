@@ -158,8 +158,10 @@ class Fishbowl:
             request = xmlrequests.SimpleRequest(request, value, key=self.key)
         root = self.send_message(request)
         if response_node_name:
-            root = root.find('FbiMsgsRs').find(response_node_name)
             try:
+                resp = root.find('FbiMsgsRs')
+                check_status(resp, allow_none=True)
+                root = resp.find(response_node_name)
                 check_status(root, allow_none=True)
             except FishbowlError:
                 if silence_errors:
@@ -295,8 +297,10 @@ class Fishbowl:
         :returns: A list of lazy :cls:`fishbowl.objects.Customer` objects
         """
         customers = []
-        request = self.send_request('CustomerNameListRq')
-        for tag in request.find('FbiMsgsRs').iter('Name'):
+        request = self.send_request(
+            'CustomerNameListRq', response_node_name='CustomerNameListRs',
+            single=False)
+        for tag in request.iter('Name'):
             get_customer = partial(
                 self.send_request, 'CustomerGetRq', {'Name': tag.text},
                 response_node_name='CustomerGetRs',
