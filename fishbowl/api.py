@@ -113,7 +113,6 @@ class Fishbowl:
             self.close(skip_errors=True)
             raise
 
-    @require_connected
     def close(self, skip_errors=False):
         """
         Close connection to Fishbowl API.
@@ -121,6 +120,8 @@ class Fishbowl:
         self._connected = False
         self.key = None
         try:
+            if not self.connected:
+                raise OSError('Not connected')
             self.stream.close()
         except Exception:
             if not skip_errors:
