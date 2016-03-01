@@ -16,6 +16,7 @@ Then run::
     python fishbowl/__init__.py
 """
 
+import collections
 import datetime
 import logging
 import os
@@ -60,9 +61,10 @@ def run():
     if len(sys.argv) > 1:
         value = None
         if len(sys.argv) > 2:
-            value = json.loads(sys.argv[2])
+            value = json.loads(
+                sys.argv[2], object_pairs_hook=collections.OrderedDict)
         response = fishbowl.send_request(sys.argv[1], value)
-        return etree.tostring(response)
+        return etree.tostring(response).decode('utf-8')
 
     # fishbowl.send_request(
     #     'GetSOListRq',
@@ -76,7 +78,7 @@ def run():
     # response = fishbowl.send_request('GetShipListRq')
 
     # products = fishbowl.get_products()
-    customers = fishbowl.get_customers_fast(populate_pricing_rules=True, 
+    customers = fishbowl.get_customers_fast(populate_pricing_rules=True,
         populate_addresses=False)
     # rules = fishbowl.get_pricing_rules()
     import ipdb; ipdb.set_trace()
