@@ -124,6 +124,23 @@ class SimpleRequest(Request):
                 el.text = str(value)
 
 
+class ImportRequest(Request):
+
+    def __init__(self, request_type, value=None, key=''):
+        Request.__init__(self, key)
+        el = self.add_request_element('ImportRq')
+        self.add_elements(el, [('Type', request_type)])
+        self.el_rows = etree.SubElement(el, 'Rows')
+        if value:
+            self.add_rows(value)
+
+    def add_row(self, row):
+        self.add_rows([row])
+
+    def add_rows(self, rows):
+        self.add_elements(self.el_rows, [('Row', row) for row in rows])
+
+
 class AddInventory(Request):
 
     def __init__(
