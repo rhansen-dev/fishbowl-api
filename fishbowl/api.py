@@ -34,6 +34,10 @@ class FishbowlError(Exception):
     pass
 
 
+class FishbowlTimeoutError(FishbowlError):
+    pass
+
+
 def require_connected(func):
     """
     A decorator to wrap :cls:`Fishbowl` methods that can only be called after a
@@ -236,7 +240,7 @@ class Fishbowl:
                 msg = 'Connection timeout (after length received)'
             else:
                 msg = 'Connection timeout'
-            raise FishbowlError(msg)
+            raise FishbowlTimeoutError(msg)
         response = response.decode(self.encoding)
         logger.debug('Response received:\n' + response)
         return etree.fromstring(response)
