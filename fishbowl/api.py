@@ -116,6 +116,7 @@ class Fishbowl:
         except Exception:
             self.close(skip_errors=True)
             raise
+        self.username = username
 
     def close(self, skip_errors=False):
         """

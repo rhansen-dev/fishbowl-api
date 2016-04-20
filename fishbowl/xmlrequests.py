@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import datetime
 from lxml import etree
+from collections import OrderedDict
 
 import six
 
@@ -181,3 +182,29 @@ class GetPOList(Request):
             self.add_elements(el_rq, {
                 'LocationGroup': locationgroup,
             })
+
+
+class AddMemo(Request):
+    item_types = (
+        'Part', 'Product', 'Customer', 'Vendor', 'SO', 'PO', 'TO', 'MO',
+        'RMA', 'BOM')
+
+    def __init__(self, item_type, item_num, memo, username='', key=''):
+        Request.__init__(self, key)
+        if item_type not in self.item_types:
+            raise TypeError(
+                "{} is not a valid memo item type".format(item_type))
+        # Use the correct node name for the item number type (falling back to
+        # OrderNum for everything else).
+        if item_type in ('Part', 'Product', 'Customer', 'Vendor'):
+            num_attr = '{}Num'.format(item_type)
+        else:
+            num_attr = 'OrderNum'
+        self.add_data('AddMemoRq', OrderedDict([
+            ('ItemType', item_type),
+            (num_attr, item_num),
+            ('Memo', OrderedDict([
+                ('Memo', memo),
+                ('UserName', username),
+            ])),
+        ]))
