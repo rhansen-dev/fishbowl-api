@@ -394,7 +394,7 @@ class Fishbowl:
         products = []
         if populate_uoms:
             uom_map = self.get_uom_map()
-        for row in self.send_query('SELECT P.*, PART.STDCOST AS StandardCost FROM PRODUCT P INNER JOIN PART ON P.PARTID = PART.ID'):
+        for row in self.send_query('SELECT P.*, PART.STDCOST AS StandardCost, PART.TYPEID as TypeID FROM PRODUCT P INNER JOIN PART ON P.PARTID = PART.ID'):
             product = objects.Product(row, name=row.get('NUM'))
             if not product:
                 continue
