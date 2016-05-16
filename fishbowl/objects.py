@@ -127,7 +127,7 @@ class FishbowlObject(collections.Mapping):
             if six.PY2:
                 key = key.decode(self.encoding)
             if children:
-                if filter(None, [el.text.strip() for el in child if el.text]):
+                if [el for el in child if el.text.strip()]:
                     data[key] = self.get_xml_data(child)
                 else:
                     inner = []
