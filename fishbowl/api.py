@@ -16,7 +16,7 @@ from . import xmlrequests, statuscodes, objects
 logger = logging.getLogger(__name__)
 
 PRICING_RULES_SQL = (
-    'SELECT product.num, '
+    'SELECT p.id, p.isactive, product.num, '
     'p.patypeid, p.papercent, p.pabaseamounttypeid, p.paamount, '
     'p.customerincltypeid, p.customerinclid '
     'from pricingrule p inner join product on p.productinclid = product.id '
