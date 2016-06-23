@@ -16,12 +16,24 @@ from . import xmlrequests, statuscodes, objects
 logger = logging.getLogger(__name__)
 
 PRICING_RULES_SQL = (
-    'SELECT product.num, '
+    'SELECT p.id, p.isactive, product.num, '
     'p.patypeid, p.papercent, p.pabaseamounttypeid, p.paamount, '
     'p.customerincltypeid, p.customerinclid '
-    'from pricingrule p inner join product on p.productinclid = product.id '
-    'where p.isactive = 1 and p.productincltypeid = 2 and '
+    'from pricingrule p INNER JOIN product on p.productinclid = product.id '
+    'where p.productincltypeid = 2 and '
     'p.customerincltypeid in (1, 2)')
+
+
+CUSTOMER_GROUP_PRICING_RULES_SQL = (
+    'SELECT p.id, p.isactive, product.num, p.patypeid, p.papercent, '
+    'p.pabaseamounttypeid, p.paamount, p.customerincltypeid, p.customerinclid, '
+    'c.id as customerid, ag.name as accountgroupname, c.name as customername '
+    'FROM pricingrule p '
+    'INNER JOIN product ON p.productinclid = product.id '
+    'INNER JOIN accountgroup ag ON p.customerinclid = ag.id '
+    'INNER JOIN accountgrouprelation agr ON agr.groupid = ag.id '
+    'INNER JOIN customer c ON agr.accountid = c.accountid '
+    'WHERE p.productincltypeid = 2 AND p.customerincltypeid = 3')
 
 
 def UnicodeDictReader(utf8_data, **kwargs):
@@ -418,15 +430,23 @@ class Fishbowl:
             rules relevant to all customers.
         """
         pricing_rules = {None: []}
-        for row in self.send_query(PRICING_RULES_SQL):
-            customer_type = row.pop('CUSTOMERINCLTYPEID')
-            customer_id = row.pop('CUSTOMERINCLID')
-            if customer_type == '1':
-                customer_id = None
-            else:
-                customer_id = int(customer_id)
-            customer_pricing = pricing_rules.setdefault(customer_id, [])
-            customer_pricing.append(row)
+        def process_rules(data, rules):
+            for row in data:
+                customer_type = row.pop('CUSTOMERINCLTYPEID')
+                customer_id = row.pop('CUSTOMERINCLID')
+                if customer_type == '1':
+                    customer_id = None
+                elif customer_type == '3':
+                    customer_id = int(row.pop('CUSTOMERID'))
+                else:
+                    customer_id = int(customer_id)
+                customer_pricing = rules.setdefault(customer_id, [])
+                customer_pricing.append(row)
+
+        process_rules(self.send_query(PRICING_RULES_SQL), pricing_rules)
+        process_rules(
+            self.send_query(CUSTOMER_GROUP_PRICING_RULES_SQL), pricing_rules)
+
         return pricing_rules
 
     @require_connected
