@@ -50,6 +50,10 @@ class FishbowlTimeoutError(FishbowlError):
     pass
 
 
+class FishbowlConnectionError(FishbowlError):
+    pass
+
+
 def require_connected(func):
     """
     A decorator to wrap :cls:`Fishbowl` methods that can only be called after a
@@ -91,7 +95,11 @@ class Fishbowl:
         """
         stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         logger.info('Connecting to {}:{}'.format(self.host, self.port))
-        stream.connect((self.host, self.port))
+        try:
+            stream.connect((self.host, self.port))
+        except socket.error as e:
+            msg = getattr(e, 'strerror', None) or e.message
+            raise FishbowlConnectionError(msg)
         stream.settimeout(timeout)
         return stream
 
