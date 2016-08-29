@@ -290,6 +290,26 @@ class UOM(FishbowlObject):
     }
 
 
+class Location(FishbowlObject):
+    id_field = 'LocationID'
+    fields = {
+        'LocationID': int,
+        'TypeID': int,
+        'ParentID': int,
+        'Name': None,
+        'Description': None,
+        'CountedAsAvailable': fishbowl_boolean,
+        'Default': fishbowl_boolean,
+        'Active': fishbowl_boolean,
+        'Pickable': fishbowl_boolean,
+        'Receivable': fishbowl_boolean,
+        'LocationGroupID': int,
+        'LocationGroupName': None,
+        'EnforceTracking': fishbowl_boolean,
+        'SortOrder': int,  # misspelled in docs; might want to verify this.
+    }
+
+
 class Part(FishbowlObject):
     id_field = 'PartID'
     fields = {

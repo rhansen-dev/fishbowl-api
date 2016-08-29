@@ -208,3 +208,47 @@ class AddMemo(Request):
                 ('UserName', username),
             ])),
         ]))
+
+
+class MoveInventory(Request):
+    """
+    Build an inventory move request for execution in Fishbowl.
+    """
+
+    REQUEST_SYNTAX = 'MoveRq'
+
+    def __init__(
+        self,
+        serial_number,
+        part_id,
+        source_location_id,
+        destination_location_id,
+        quantity,
+        key=''
+    ):
+        Request.__init__(self, key)
+        el_rq = self.add_request_element(self.REQUEST_SYNTAX)
+        self.add_elements(
+            el_rq,
+            {
+                'SourceLocation': {
+                    'Location': {
+                        'LocationID': source_location_id
+                    }
+                },
+                'Part': {
+                    'PartID': part_id,
+                    'PartTrackingList': [{
+                        'PartTracking': {
+                            'Name': serial_number
+                        }
+                    }]
+                },
+                'DestinationLocation': {
+                    'Location': {
+                        'LocationID': destination_location_id
+                    }
+                },
+                'Quantity': quantity,
+            }
+        )

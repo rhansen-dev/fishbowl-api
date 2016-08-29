@@ -36,6 +36,12 @@ CYCLE_INVENTORY_XML = '''
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
+MOVE_INVENTORY_XML = '''
+<FbiXml>
+<MoveRs statusCode="{0}"></MoveRs>
+</FbiXml>
+'''.format(statuscodes.SUCCESS).encode('ascii')
+
 
 class APIStreamTest(TestCase):
 
@@ -148,3 +154,14 @@ class APITest(TestCase):
         self.connect()
         self.set_response_xml(CYCLE_INVENTORY_XML)
         self.api.cycle_inventory(partnum='abc', qty=2, locationid=1)
+
+    def test_move_inventory(self):
+        self.connect()
+        self.set_response_xml(MOVE_INVENTORY_XML)
+        self.api.cycle_inventory(
+            serial_number='018_4P110513M04_P_LIN',
+            part_id='315125_CO',
+            source_location_id='',
+            destination_location_id='',
+            quantity=1,
+        )

@@ -297,6 +297,42 @@ class Fishbowl:
                 for val in ['cycle_inv', partnum, qty, locationid]]))
 
     @require_connected
+    def move_inventory(
+        self,
+        serial_number,
+        part_id,
+        quantity=1,
+        source_location_id,
+        destination_location_id,
+    ):
+        """
+        Move a serialized `Part` from one location to another in Fishbowl.
+        """
+
+        request = xmlrequests.MoveInventory(
+            serial_number,
+            part_id,
+            quantity,
+            source_location_id,
+            destination_location_id,
+            key=self.key,
+        )
+        response = self.send_message(request)
+
+        for element in response.iter('MoveRs'):
+            check_status(element, allow_none=True)
+            logger.info(','.join([
+                '{}'.format(val)
+                for val in [
+                    'move_inventory',
+                    serial_number,
+                    part_id,
+                    quantity,
+                    source_location_id,
+                    destination_location_id]
+            ]))
+
+    @require_connected
     def get_po_list(self, locationgroup):
         """
         Get list of POs.
