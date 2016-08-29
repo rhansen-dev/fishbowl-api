@@ -301,9 +301,9 @@ class Fishbowl:
         self,
         serial_number,
         part_id,
-        quantity=1,
         source_location_id,
         destination_location_id,
+        quantity=1
     ):
         """
         Move a serialized `Part` from one location to another in Fishbowl.
