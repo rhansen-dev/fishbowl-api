@@ -161,7 +161,7 @@ class APITest(TestCase):
         self.api.cycle_inventory(
             serial_number='018_4P110513M04_P_LIN',
             part_id='315125_CO',
-            source_location_id='',
-            destination_location_id='',
+            source_location_id='5853',
+            destination_location_id='5854',
             quantity=1,
         )

@@ -4,3 +4,4 @@
 fishbowl.log
 fishbowl/fishbowl.ini
 .python-version
+.env
