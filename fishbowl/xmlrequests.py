@@ -227,28 +227,50 @@ class MoveInventory(Request):
         key=''
     ):
         Request.__init__(self, key)
-        el_rq = self.add_request_element(self.REQUEST_SYNTAX)
-        self.add_elements(
-            el_rq,
-            {
-                'SourceLocation': {
-                    'Location': {
-                        'LocationID': source_location_id
-                    }
-                },
-                'Part': {
-                    'PartID': part_id,
-                    'PartTrackingList': [{
-                        'PartTracking': {
-                            'Name': serial_number
-                        }
-                    }]
-                },
-                'DestinationLocation': {
-                    'Location': {
-                        'LocationID': destination_location_id
-                    }
-                },
-                'Quantity': quantity,
-            }
-        )
+        # el_rq = self.add_request_element(self.REQUEST_SYNTAX)
+        self.add_data(self.REQUEST_SYNTAX, OrderedDict([
+            ('SourceLocation', OrderedDict([
+                'Location', OrderedDict([
+                    ('LocationID', source_location_id)
+                ])
+            ])),
+            ('Part', OrderedDict([
+                ('PartID', part_id),
+                ('PartTrackingList', [
+                    OrderedDict([
+                        ('PartTracking', OrderedDict([
+                            ('Name', serial_number)
+                        ]))
+                    ])
+                ])
+            ])),
+            ('DestinationLocation', OrderedDict([
+                'Location', OrderedDict([
+                    ('LocationID', destination_location_id)
+                ])
+            ])),
+        ]))
+        # self.add_elements(
+        #     el_rq,
+        #     {
+        #         'SourceLocation': {
+        #             'Location': {
+        #                 'LocationID': source_location_id
+        #             }
+        #         },
+        #         'Part': {
+        #             'PartID': part_id,
+        #             'PartTrackingList': [{
+        #                 'PartTracking': {
+        #                     'Name': serial_number
+        #                 }
+        #             }]
+        #         },
+        #         'DestinationLocation': {
+        #             'Location': {
+        #                 'LocationID': destination_location_id
+        #             }
+        #         },
+        #         'Quantity': quantity,
+        #     }
+        # )
