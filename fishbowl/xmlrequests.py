@@ -1,10 +1,12 @@
 from __future__ import unicode_literals
 
-import datetime
-from lxml import etree
 from collections import OrderedDict
+from lxml import etree
 
+import datetime
 import six
+
+import os
 
 
 class Request(object):
@@ -26,16 +28,42 @@ class Request(object):
         return etree.tostring(self.el_root, pretty_print=True)
 
     def add_elements(self, parent, elements):
+        import ipdb; ipdb.set_trace()
         if isinstance(elements, dict):
             elements = elements.items()
         for name, value in elements:
-            el = etree.SubElement(parent, name)
-            if value is not None:
-                if isinstance(value, datetime.datetime):
-                    value = value.strftime("%Y-%m-%dT%H:%M:%S")
-                else:
-                    value = str(value)
-                el.text = value
+            if isinstance(value, dict):
+                self.add_elements(name, value)
+            else:
+                el = etree.SubElement(parent, name)
+                if value is not None:
+                    if isinstance(value, datetime.datetime):
+                        value = value.strftime("%Y-%m-%dT%H:%M:%S")
+                    else:
+                        value = str(value)
+                    el.text = value
+
+    def dict_to_xml(self, dict_, parent_node=None, parent_name=''):
+        def node_for_value(name, value, parent_node, parent_name):
+            value = os.path.join(parent_name, value)
+            node = etree.SubElement(parent_node, 'li')
+            child = etree.SubElement(node, 'input')
+            child.set('type', 'checkbox')
+            child = etree.SubElement(node, 'label')
+            child.text = name
+            return node
+
+        # <Parent />.
+        node = etree.SubElement(parent_node, parent_name)
+
+        # <Child />.
+        for key, value in dict_.iteritems():
+            if isinstance(value, dict):
+                child = node_for_value(key, key, node, parent_name)
+                self.dict_to_xml(value, child, key)
+            else:
+                node_for_value(key, value, node, parent_name)
+        return node
 
     def add_request_element(self, name):
         return etree.SubElement(self.el_request, name)
@@ -228,31 +256,8 @@ class MoveInventory(Request):
     ):
         Request.__init__(self, key)
         el_rq = self.add_request_element(self.REQUEST_SYNTAX)
-        # self.add_data(self.REQUEST_SYNTAX, OrderedDict([
-        #     ('SourceLocation', OrderedDict([
-        #         'Location', OrderedDict([
-        #             ('LocationID', source_location_id)
-        #         ])
-        #     ])),
-        #     ('Part', OrderedDict([
-        #         ('PartID', part_id),
-        #         ('PartTrackingList', [
-        #             OrderedDict([
-        #                 ('PartTracking', OrderedDict([
-        #                     ('Name', serial_number)
-        #                 ]))
-        #             ])
-        #         ])
-        #     ])),
-        #     ('DestinationLocation', OrderedDict([
-        #         'Location', OrderedDict([
-        #             ('LocationID', destination_location_id)
-        #         ])
-        #     ])),
-        # ]))
         self.add_elements(
-            el_rq,
-            {
+            el_rq, {
                 'SourceLocation': {
                     'Location': {
                         'LocationID': source_location_id
