@@ -42,6 +42,12 @@ MOVE_INVENTORY_XML = '''
 </FbiXml>
 '''.format(statuscodes.SUCCESS).encode('ascii')
 
+MOVE_INVENTORY_XML_FAIL = '''
+<FbiXml>
+<MoveRs statusCode="{0}"></MoveRs>
+</FbiXml>
+'''.format('').encode('ascii')
+
 
 class APIStreamTest(TestCase):
 
