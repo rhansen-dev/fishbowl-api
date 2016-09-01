@@ -81,7 +81,6 @@ def run():
     customers = fishbowl.get_customers_fast(populate_pricing_rules=True,
         populate_addresses=False)
     # rules = fishbowl.get_pricing_rules()
-    import ipdb; ipdb.set_trace()
 
     response = fishbowl.send_request('CustomerNameListRq')
     return etree.tostring(response)

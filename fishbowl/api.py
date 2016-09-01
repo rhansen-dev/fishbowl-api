@@ -380,6 +380,23 @@ class Fishbowl:
             [objects.UOM(node) for node in response.iter('UOM')])
 
     @require_connected
+    def get_part(self, part_number, get_image=False):
+        """
+        Get a specified `fishbowl.objects.Part` object by `Part.Number`.
+
+        :param part_number: `Part.Number`.
+        :param get_image: Conditional inclusion of `Part` image path/URL.
+        :returns: `fishbowl.objects.Part`.
+        """
+        response = self.send_request(
+            'PartGetRq',
+            response_node_name='PartGetRs',
+            single=True
+        )
+        part = [objects.Part(node) for node in response.iter('Part')]
+        return part
+
+    @require_connected
     def get_parts(self, populate_uoms=True):
         """
         Get a light list of parts.

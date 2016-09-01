@@ -1,12 +1,11 @@
 from __future__ import unicode_literals
 
 from collections import OrderedDict
+from dicttoxml import dicttoxml
 from lxml import etree
 
 import datetime
 import six
-
-import os
 
 
 class Request(object):
@@ -28,7 +27,6 @@ class Request(object):
         return etree.tostring(self.el_root, pretty_print=True)
 
     def add_elements(self, parent, elements):
-        import ipdb; ipdb.set_trace()
         if isinstance(elements, dict):
             elements = elements.items()
         for name, value in elements:
@@ -43,27 +41,8 @@ class Request(object):
                         value = str(value)
                     el.text = value
 
-    def dict_to_xml(self, dict_, parent_node=None, parent_name=''):
-        def node_for_value(name, value, parent_node, parent_name):
-            value = os.path.join(parent_name, value)
-            node = etree.SubElement(parent_node, 'li')
-            child = etree.SubElement(node, 'input')
-            child.set('type', 'checkbox')
-            child = etree.SubElement(node, 'label')
-            child.text = name
-            return node
-
-        # <Parent />.
-        node = etree.SubElement(parent_node, parent_name)
-
-        # <Child />.
-        for key, value in dict_.iteritems():
-            if isinstance(value, dict):
-                child = node_for_value(key, key, node, parent_name)
-                self.dict_to_xml(value, child, key)
-            else:
-                node_for_value(key, value, node, parent_name)
-        return node
+    def serialize(self, dict_):
+        return str(dicttoxml(dict_, attr_type=False, root=False))
 
     def add_request_element(self, name):
         return etree.SubElement(self.el_request, name)
@@ -238,12 +217,13 @@ class AddMemo(Request):
         ]))
 
 
-class MoveInventory(Request):
+class MoveInventory():
     """
     Build an inventory move request for execution in Fishbowl.
     """
 
     REQUEST_SYNTAX = 'MoveRq'
+    KEY_REQUIRED = True
 
     def __init__(
         self,
@@ -254,28 +234,39 @@ class MoveInventory(Request):
         quantity,
         key=''
     ):
-        Request.__init__(self, key)
-        el_rq = self.add_request_element(self.REQUEST_SYNTAX)
-        self.add_elements(
-            el_rq, {
-                'SourceLocation': {
-                    'Location': {
-                        'LocationID': source_location_id
+
+        if self.KEY_REQUIRED and not key:
+            raise TypeError(
+                "An API key was not provided (not enough arguments for {0} "
+                "request)".format(self.__class__.__name__))
+
+        self.request_elements = {
+            'FbiXml': {
+                'Ticket': {
+                    'Key': str(key)
+                },
+                'FbiMsgsRq': {
+                    'MoveRq': {
+                        'SourceLocation': {
+                            'Location': {
+                                'LocationID': str(source_location_id)
+                            }
+                        },
+                        'Part': {
+                            'PartID': str(part_id),
+                            'PartTrackingList': {
+                                'PartTracking': {
+                                    'Name': 'Serial Number'
+                                }
+                            }
+                        },
+                        'DestinationLocation': {
+                            'Location': {
+                                'LocationID': str(destination_location_id)
+                            }
+                        },
+                        'Quantity': str(quantity),
                     }
-                },
-                'Part': {
-                    'PartID': part_id,
-                    'PartTrackingList': [{
-                        'PartTracking': {
-                            'Name': serial_number
-                        }
-                    }]
-                },
-                'DestinationLocation': {
-                    'Location': {
-                        'LocationID': destination_location_id
-                    }
-                },
-                'Quantity': quantity,
+                }
             }
-        )
+        }

@@ -18,5 +18,5 @@ setup(
     author_email='smileychris@gmail.com',
     license='MIT',
     packages=['fishbowl'],
-    install_requires=['lxml', 'six'],
+    install_requires=['dicttoxml', 'lxml', 'six'],
 )
