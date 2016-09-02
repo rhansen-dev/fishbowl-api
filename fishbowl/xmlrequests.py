@@ -217,9 +217,26 @@ class AddMemo(Request):
         ]))
 
 
+class PartGet(Request):
+    """
+    Build a `PartGetRq` request for execution in Fishbowl.
+    """
+    REQUEST_SYNTAX = 'PartGetRq'
+
+    def __init__(self, part_number, get_image, key=''):
+        Request.__init__(self, key)
+
+        el_rq = self.add_request_element(self.REQUEST_SYNTAX)
+        if part_number is not None:
+            self.add_elements(el_rq, {
+                'Number': part_number,
+                'GetImage': get_image,
+            })
+
+
 class MoveInventory():
     """
-    Build an inventory move request for execution in Fishbowl.
+    Build a `MoveRq` request for execution in Fishbowl.
     """
 
     REQUEST_SYNTAX = 'MoveRq'
