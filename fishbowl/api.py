@@ -388,7 +388,7 @@ class Fishbowl:
         :param get_image: Conditional inclusion of `Part` image path/URL.
         :returns: `fishbowl.objects.Part`.
         """
-        request = xmlrequests.PartGet(part_number, get_image)
+        request = xmlrequests.PartGet(part_number, get_image, key=self.key)
         return self.send_message(request)
 
     @require_connected
